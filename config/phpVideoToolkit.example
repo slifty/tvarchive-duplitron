@@ -1,0 +1,13 @@
+<?php
+
+	namespace PHPVideoToolkit;
+
+	$config = new Config(array(
+		'temp_directory' => '/tmp',
+		'ffmpeg' => '/usr/local/Cellar/ffmpeg/2.5.3/bin/ffmpeg',
+		'ffprobe' => '/usr/local/Cellar/ffmpeg/2.5.3/bin/ffprobe',
+		'yamdi' => '',
+		'qtfaststart' => '',
+	), true);
+
+?>

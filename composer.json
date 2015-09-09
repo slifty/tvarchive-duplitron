@@ -1,7 +1,7 @@
 {
 	"require": {
         "stage1/docker-php": "@dev",
-        "buggedcom/phpvideotoolkit": "^2.2",
+        "buggedcom/phpvideotoolkit": "^2.1",
 		"monolog/monolog": "^1.16",
 		"tedivm/stash": "^0.13.1"
     }
