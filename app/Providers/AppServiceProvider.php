@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Providers;
+namespace Duplitron\Providers;
 
 use Illuminate\Support\ServiceProvider;
 

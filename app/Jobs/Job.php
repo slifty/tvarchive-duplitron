@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Jobs;
+namespace Duplitron\Jobs;
 
 use Illuminate\Bus\Queueable;
 

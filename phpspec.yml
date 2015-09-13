@@ -1,5 +1,5 @@
 suites:
     main:
-        namespace: App
-        psr4_prefix: App
+        namespace: Duplitron
+        psr4_prefix: Duplitron
         src_path: app
