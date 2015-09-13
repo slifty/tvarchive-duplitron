@@ -1,6 +1,5 @@
-# Composer
-composer.lock
-vendor/*
-
-# Config files
-config/*.php
+/vendor
+/node_modules
+Homestead.yaml
+Homestead.json
+.env
