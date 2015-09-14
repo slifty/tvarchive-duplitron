@@ -18,5 +18,5 @@ To run this code you need:
 * [Docker](https://www.docker.com/) for running audfprint
 * [ffmpeg](https://ffmpeg.org/) for manipulating audio files
 
-## Dependencies
+## Installing
 
