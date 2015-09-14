@@ -55,15 +55,4 @@ Route::delete('/api/projects', function () {
 /**
  * REST for Task Model
  */
-Route::get('/api/tasks', function () {
-    return get_loaded_extensions();
-});
-Route::post('/api/tasks', function () {
-    return "hello world";
-});
-Route::put('/api/tasks/{id}', function ($id) {
-    return "hello world";
-});
-Route::delete('/api/tasks', function () {
-    return "hello world";
-});
+Route::resource('tasks', 'TaskController');

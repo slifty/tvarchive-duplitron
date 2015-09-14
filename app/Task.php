@@ -6,7 +6,14 @@ use Illuminate\Database\Eloquent\Model;
 
 class Task extends Model
 {
-	/e**
+    const STATUS_NEW = 0;
+    const STATUS_STARTED = 1;
+    const STATUS_GENERATING_FPRINT = 2;
+    const STATUS_MATCHING = 3;
+    const STATUS_FINISHED = 4;
+    const STATUS_FAILED = -1;
+
+	/**
      * The database table used by the model.
      *
      * @var string
@@ -18,13 +25,13 @@ class Task extends Model
      *
      * @var array
      */
-    protected $fillable = ['name'];
+    protected $fillable = ['project', 'fprintPath', 'mediaPath', 'status'];
 
     /**
      * The attributes excluded from the model's JSON form.
      *
      * @var array
      */
-    protected $hidden = [];
+    protected $hidden = ['imageId'];
 
 }
