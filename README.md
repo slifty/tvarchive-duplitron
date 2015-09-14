@@ -4,6 +4,8 @@ This repository uses [audfprint](https://github.com/dpwe/audfprint) (via a docke
 
 The API itself is powered by [Laravel](http://laravel.com).
 
+The code is written to support [PSR-2](http://www.php-fig.org/psr/psr-2/index.html)
+
 ## Dependencies
 
 To run this code you need:
@@ -19,4 +21,3 @@ To run this code you need:
 * [ffmpeg](https://ffmpeg.org/) for manipulating audio files
 
 ## Installing
-

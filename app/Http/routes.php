@@ -12,7 +12,26 @@
 */
 
 Route::get('/', function () {
-    return view('welcome');
+    $docker = new Docker\Docker(Docker\Http\DockerClient::createWithEnv());
+
+    $container = new Docker\Container(
+        [
+            'Image' => 'docker/whalesay:latest',
+            'Entrypoint' => ['cowsay', 'boo']
+        ]
+    );
+
+    $manager = $docker->getContainerManager();
+    $manager->create($container);
+    $manager->run($container, function($output, $type) {
+        echo($output);
+    });
+
+    printf('Container\'s id is %s', $container->getId());
+    printf('Container\'s name is %s', $container->getName());
+    printf('Container\'s exit code is %d', $container->getExitCode());
+
+    return "What you have just witnessed is a test of Docker integration";
 });
 
 
