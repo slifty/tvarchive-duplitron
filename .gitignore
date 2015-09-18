@@ -5,3 +5,9 @@ Homestead.json
 .env
 
 *.pem
+
+/storage/media/*
+/storage/audfprint/*
+!*.gitkeep
+
+*.DS_Store

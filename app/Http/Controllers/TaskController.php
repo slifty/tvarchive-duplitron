@@ -44,7 +44,7 @@ class TaskController extends Controller
         $task->status = Task::STATUS_NEW;
         $task->save();
 
-        // Create a job for this task
+        // Dispatch a job for this task
         $this->dispatch(new PerformVideoMatch($task));
         return $task;
     }
