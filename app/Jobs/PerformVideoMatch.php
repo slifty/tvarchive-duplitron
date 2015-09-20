@@ -20,9 +20,9 @@ class PerformVideoMatch extends Job implements SelfHandling, ShouldQueue
      *
      * @return void
      */
-    public function __construct(Task $task)
+    public function __construct()
     {
-        $this->task = $task;
+        $this->task = null;
     }
 
     /**
@@ -33,19 +33,14 @@ class PerformVideoMatch extends Job implements SelfHandling, ShouldQueue
     public function handle()
     {
         // TODO: Make a "Docker" provider
-        $docker = new Docker\Docker(Docker\Http\DockerClient::createWithEnv());
+        $docker = new \Docker\Docker(\Docker\Http\DockerClient::createWithEnv());
 
-        $container = new Docker\Container(
+        $container = new \Docker\Container(
             [
                 'Image' => env('DOCKER_FPRINT_IMAGE'),
-                'Entrypoint' => ['cowsay', 'boo'],
-                'Mounts' => [
-                    {
-                        'Source':env('FPRINT_STORE'),
-                        'Destination': '/var/audfprint',
-                        'Mode':'',
-                        'RW':false
-                    }
+                'Cmd' => ['precompute', '/var/audfprint/music.mp3'],
+                'HostConfig' => [
+                    'Binds' => [env('FPRINT_STORE').':/var/audfprint']
                 ]
             ]
         );
@@ -53,12 +48,6 @@ class PerformVideoMatch extends Job implements SelfHandling, ShouldQueue
         $manager = $docker->getContainerManager();
         $manager->create($container);
         $manager->run($container, function($output, $type) {
-            echo($output);
         });
-
-        printf('Container\'s id is %s', $container->getId());
-        printf('Container\'s name is %s', $container->getName());
-        printf('Container\'s exit code is %d', $container->getExitCode());
-
     }
 }

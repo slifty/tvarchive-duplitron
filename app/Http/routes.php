@@ -12,24 +12,30 @@
 */
 
 Route::get('/', function () {
-    $docker = new Docker\Docker(Docker\Http\DockerClient::createWithEnv());
+    // $docker = new Docker\Docker(Docker\Http\DockerClient::createWithEnv());
 
-    $container = new Docker\Container(
-        [
-            'Image' => 'docker/whalesay:latest',
-            'Entrypoint' => ['cowsay', 'boo']
-        ]
-    );
+    // $container = new Docker\Container(
+    //     [
+    //         'Image' => env('DOCKER_FPRINT_IMAGE'),
+    //         'Cmd' => ['precompute', '/var/audfprint/music.mp3'],
+    //         'HostConfig' => [
+    //             'Binds' => [env('FPRINT_STORE').':/var/audfprint']
+    //         ]
+    //     ]
+    // );
 
-    $manager = $docker->getContainerManager();
-    $manager->create($container);
-    $manager->run($container, function($output, $type) {
-        echo($output);
-    });
+    // $manager = $docker->getContainerManager();
+    // $manager->create($container);
+    // $manager->run($container, function($output, $type) {
+    //     echo($output);
+    // });
 
-    printf('Container\'s id is %s', $container->getId());
-    printf('Container\'s name is %s', $container->getName());
-    printf('Container\'s exit code is %d', $container->getExitCode());
+    // printf('Container\'s id is %s', $container->getId());
+    // printf('Container\'s name is %s', $container->getName());
+    // printf('Container\'s exit code is %d', $container->getExitCode());
+    //
+
+
 
     return "What you have just witnessed is a test of Docker integration";
 });
@@ -55,4 +61,4 @@ Route::delete('/api/projects', function () {
 /**
  * REST for Task Model
  */
-Route::resource('tasks', 'TaskController');
+Route::resource('/api/tasks', 'TaskController');

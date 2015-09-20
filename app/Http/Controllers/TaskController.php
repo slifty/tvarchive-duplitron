@@ -19,7 +19,14 @@ class TaskController extends Controller
      */
     public function index()
     {
-        //
+        // Create a new task object
+        //$task = new Task();
+        // $task->status = Task::STATUS_NEW;
+        // $task->save();
+
+        // Dispatch a job for this task
+        $this->dispatch(new PerformVideoMatch());
+        return '';
     }
 
     /**
@@ -39,14 +46,6 @@ class TaskController extends Controller
      */
     public function store(Request $request)
     {
-        // Create a new task object
-        $task = new Task()
-        $task->status = Task::STATUS_NEW;
-        $task->save();
-
-        // Dispatch a job for this task
-        $this->dispatch(new PerformVideoMatch($task));
-        return $task;
     }
 
     /**
