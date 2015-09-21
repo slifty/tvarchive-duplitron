@@ -96,6 +96,26 @@ Code | :Content
 ----------
 
 ## Media
+
+###### Media Object JSON
+
+```json
+	{
+		"id": 12,
+		"audfprint": {
+			"candidate": true,
+			"corpus": false,
+			"distractor": false,
+			"match": false
+		}
+		"jobs": [],
+		"project_id": 12,
+		"media_rsync_path": "",
+		"audfprint_rsync_path": ""
+	}
+```
+
+
 ### Create Media
 
 Creates and returns json data about a single new media project.
@@ -144,21 +164,8 @@ None
 
 Code | Content
 --- | ---
-200 | ```json
-	{
-		"id": 12,
-		"audfprint": {
-			"candidate": true,
-			"corpus": false,
-			"distractor": false,
-			"match": false
-		}
-		"jobs": [],
-		"project_id": 12,
-		"media_rsync_path": "",
-		"audfprint_rsync_path": ""
-	}
-```
+200 | Media Object JSON
+
 
 ##### Error Response
 
