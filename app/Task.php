@@ -7,10 +7,9 @@ use Illuminate\Database\Eloquent\Model;
 class Task extends Model
 {
     const STATUS_NEW = 0;
-    const STATUS_STARTED = 1;
-    const STATUS_GENERATING_FPRINT = 2;
-    const STATUS_MATCHING = 3;
-    const STATUS_FINISHED = 4;
+    const STATUS_STARTING = 1;
+    const STATUS_PROCESSING = 2;
+    const STATUS_FINISHED = 3;
     const STATUS_FAILED = -1;
 
 	/**
