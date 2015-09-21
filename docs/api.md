@@ -33,13 +33,13 @@ Creates and returns json data about a single new matching project.
 ##### Success Response
 
 Code | Content
---- | ---
+--- |:---
 200 | `{ id : 12, name : "Political Ads" }`
 
 ##### Error Response
 
-Code | :Content
---- | ---
+Code | Content
+--- |:---
 400 | `{ error : "Project name already exists" }`
 
 
@@ -185,14 +185,14 @@ None
 ##### Success Response
 
 Code | Content
---- | ---
+--- |:---
 200 | Media Object JSON
 
 
 ##### Error Response
 
-Code | :Content
---- | ---
+Code | Content
+--- |:---
 400 | `{ error : "You did not include all required fields" }`
 
 
@@ -245,7 +245,7 @@ Code | :Content
 
 ###### Task Statuses
 
-Code | :Description
+Code | Description
 0 | New task
 1 | Starting
 2 | In Progress
@@ -254,7 +254,7 @@ Code | :Description
 
 ###### Result Codes
 
-Code | :Description
+Code | Description
 1 | Success
 0 | Fail
 
