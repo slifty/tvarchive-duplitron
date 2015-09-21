@@ -226,7 +226,7 @@ Code | Content
 ```json
 	{
 		"id": 12,
-		"media_id": 12
+		"media_id": 12,
 		"task": "match",
 		"status": {
 			"code": 0,
@@ -234,7 +234,7 @@ Code | Content
 		},
 		"result": {
 			"code": 1,
-			"data": {}
+			"data": {},
 			"output": [
 				"Lines of output",
 				"from the process"
@@ -267,8 +267,8 @@ Code | Description
 ```json
 "data": {
 	"matches": [{
-		"media_id": 13
-		"start_time": 15.32
+		"media_id": 13,
+		"start_time": 15.32,
 		"duration": 30,
 	}],
 	"segments": [{
