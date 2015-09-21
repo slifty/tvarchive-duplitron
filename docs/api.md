@@ -1,56 +1,56 @@
-## Create Project
+### Create Project
 
-	Creates and returns json data about a single new matching project.
+Creates and returns json data about a single new matching project.
 
-### URL
+###### URL
 
-	`/projects`
+`/projects`
 
-### Method
+###### Method
 
-	`POST`
+`POST`
 
-### URL Params
+###### URL Params
 
-	`None`
+`None`
 
-### Data Params
+###### Data Params
 
-	**Required:**
+**Required:**
 
-	 * `name=[string]` - A unique name for the project.
+ * `name=[string]` - A unique name for the project.
 
-	 Example:
+ Example:
 
-	 ````
-		{
-			name : [string]
+````json
+	{
+		"name" : [string]
+	}
+````
+
+###### Success Response
+
+* **Code:** 200 <br />
+	**Content:** `{ id : 12, name : "Political Ads" }`
+
+###### Error Response
+
+* **Code:** 400 BAD REQUEST <br />
+	**Content:** `{ error : "Project name already exists" }`
+
+
+###### Sample Call
+
+```javascript
+	$.ajax({
+		url: "/users/1",
+		dataType: "json",
+		data: [
+			"name": "Political Ads"
+		]
+		type : "POST",
+		success : function(r) {
+			console.log(r);
 		}
-	 ````
-
-### Success Response
-
-	* **Code:** 200 <br />
-		**Content:** `{ id : 12, name : "Political Ads" }`
-
-### Error Response
-
-	* **Code:** 400 BAD REQUEST <br />
-		**Content:** `{ error : "Project name already exists" }`
-
-
-### Sample Call
-
-	```javascript
-		$.ajax({
-			url: "/users/1",
-			dataType: "json",
-			data: [
-				"name": "Political Ads"
-			]
-			type : "POST",
-			success : function(r) {
-				console.log(r);
-			}
-		});
-	```
+	});
+```
