@@ -246,6 +246,7 @@ Code | Content
 ###### Task Statuses
 
 Code | Description
+--- |:---
 0 | New task
 1 | Starting
 2 | In Progress
@@ -255,6 +256,7 @@ Code | Description
 ###### Result Codes
 
 Code | Description
+--- |:---
 1 | Success
 0 | Fail
 
