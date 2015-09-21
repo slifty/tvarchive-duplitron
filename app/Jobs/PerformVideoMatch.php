@@ -35,7 +35,7 @@ class PerformVideoMatch extends Job implements SelfHandling, ShouldQueue
         //////////////
         // STEP 1: Copy the media file to our storage directory
 
-        // Pick a name for the temporary copy
+        // Make a name for the temporary copy
         $parsed_url = parse_url($this->task->media_url);
         $media_host = $parsed_url['host'];
         $media_user = $parsed_url['user'];
