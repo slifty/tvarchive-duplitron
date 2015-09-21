@@ -2,44 +2,44 @@
 
 Creates and returns json data about a single new matching project.
 
-###### URL
+##### URL
 
 `/projects`
 
-###### Method
+##### Method
 
 `POST`
 
-###### URL Params
+##### URL Params
 
 `None`
 
-###### Data Params
+##### Data Params
 
-**Required:**
+##### Required
 
- * `name=[string]` - A unique name for the project.
+ * name: A unique name for the project.
 
- Example:
-
-````json
+```json
 	{
 		"name" : [string]
 	}
-````
+```
 
-###### Success Response
+##### Success Response
 
-* **Code:** 200 <br />
-	**Content:** `{ id : 12, name : "Political Ads" }`
+Code | Content
+--- | ---
+200 | `{ id : 12, name : "Political Ads" }`
 
-###### Error Response
+##### Error Response
 
-* **Code:** 400 BAD REQUEST <br />
-	**Content:** `{ error : "Project name already exists" }`
+Code | Content
+--- | ---
+400 | `{ error : "Project name already exists" }`
 
 
-###### Sample Call
+##### Sample Call
 
 ```javascript
 	$.ajax({
