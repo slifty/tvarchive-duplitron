@@ -26,4 +26,11 @@ class Project extends Model
      * @var array
      */
     protected $hidden = ['audf_corpus', 'audf_candidates', 'audf_matches', 'audf_ignore'];
+
+    /**
+     * Specify 1:* relationship with Tasks
+     */
+    public function tasks() {
+        return $this->hasMany('Duplitron\Task');
+    }
 }

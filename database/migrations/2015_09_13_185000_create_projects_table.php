@@ -13,8 +13,18 @@ class CreateProjectsTable extends Migration
     public function up()
     {
         Schema::create('projects', function (Blueprint $table) {
+
+            // Create fields
             $table->increments('id');
+            $table->text('name');
+            $table->text('audf_corpus')->nullable();
+            $table->text('audf_candidates')->nullable();
+            $table->text('audf_matches')->nullable();
+            $table->text('audf_ignore')->nullable();
             $table->timestamps();
+
+            // Create indexes
+            $table->unique('name');
         });
     }
 

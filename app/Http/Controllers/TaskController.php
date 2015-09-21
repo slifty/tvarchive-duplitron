@@ -19,14 +19,7 @@ class TaskController extends Controller
      */
     public function index()
     {
-        // Create a new task object
-        //$task = new Task();
-        // $task->status = Task::STATUS_NEW;
-        // $task->save();
-
-        // Dispatch a job for this task
-        $this->dispatch(new PerformVideoMatch());
-        return '';
+        return "";
     }
 
     /**
@@ -46,6 +39,17 @@ class TaskController extends Controller
      */
     public function store(Request $request)
     {
+        // Create a new task object
+        $task = new Task();
+        $task->status = Task::STATUS_NEW;
+        $task->project_id = $request->input('project_id');
+        $task->media_url = $request->input('media_url');
+        $task->save();
+
+        // Dispatch a job for this task
+        $this->dispatch(new PerformVideoMatch($task));
+
+        return $task;
     }
 
     /**
@@ -56,7 +60,8 @@ class TaskController extends Controller
      */
     public function show($id)
     {
-        //
+        $task = Task::find($id);
+        return $task;
     }
 
     /**

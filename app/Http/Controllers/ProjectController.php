@@ -7,6 +7,8 @@ use Illuminate\Http\Request;
 use Duplitron\Http\Requests;
 use Duplitron\Http\Controllers\Controller;
 
+use Duplitron\Project;
+
 class ProjectController extends Controller
 {
     /**
@@ -16,7 +18,7 @@ class ProjectController extends Controller
      */
     public function index()
     {
-        //
+        return "";
     }
 
     /**
@@ -37,7 +39,12 @@ class ProjectController extends Controller
      */
     public function store(Request $request)
     {
-        // Create the four relevant audfprint databases
+        //
+        $project = new Project();
+        $project->name = $request->input('name');
+        $project->save();
+
+        return $project;
     }
 
     /**

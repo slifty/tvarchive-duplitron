@@ -18,20 +18,28 @@ class Task extends Model
      *
      * @var string
      */
-    protected $table = 'projects';
+    protected $table = 'tasks';
 
     /**
      * The attributes that are mass assignable.
      *
      * @var array
      */
-    protected $fillable = ['project', 'fprintPath', 'mediaPath', 'status'];
+    protected $fillable = ['project_id', 'fprint_path', 'media_path', 'status', 'result'];
 
     /**
      * The attributes excluded from the model's JSON form.
      *
      * @var array
      */
-    protected $hidden = ['imageId'];
+    protected $hidden = ['image_id'];
+
+    /**
+     * Specify 1:* relationship with Project
+     */
+    public function project() {
+        return $this->hasMany('Duplitron\Project');
+    }
+
 
 }

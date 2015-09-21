@@ -44,18 +44,7 @@ Route::get('/', function () {
 /**
  * REST for Project Model
  */
-Route::get('/api/projects', function () {
-    return "hello world";
-});
-Route::post('/api/projects', function () {
-    return "hello world";
-});
-Route::put('/api/projects/{id}', function ($id) {
-    return "hello world";
-});
-Route::delete('/api/projects', function () {
-    return "hello world";
-});
+Route::resource('/api/projects', 'ProjectController');
 
 
 /**
