@@ -1,5 +1,14 @@
 ## Projects
 
+###### Project Object JSON
+
+```json
+	{
+		"id": 12,
+		"name": "Political Ads",
+	}
+```
+
 ### Create Project
 
 Creates and returns json data about a single new matching project.
@@ -34,7 +43,7 @@ Creates and returns json data about a single new matching project.
 
 Code | Content
 --- |:---
-200 | `{ id : 12, name : "Political Ads" }`
+200 | Project Object JSON
 
 ##### Error Response
 
@@ -47,7 +56,7 @@ Code | Content
 
 ```javascript
 	$.ajax({
-		url: "/users/1",
+		url: "/projects",
 		dataType: "json",
 		data: [
 			"name": "Political Ads"
@@ -63,37 +72,51 @@ Code | Content
 
 ### Get Project
 
-##### URL
-
-##### Method
-
-##### URL Params
-
-##### Data Params
-
-###### Required
-
-##### Success Response
-
-##### Sample Call
-
-----------
-
-### Find Project by Name
+Returns json data about a single project.
 
 ##### URL
 
+`/projects/:id`
+
 ##### Method
+
+`GET`
 
 ##### URL Params
 
+###### Required
+
+ * `id`: The ID of the project being retrieved.
+
 ##### Data Params
 
-###### Required
+`None`
 
 ##### Success Response
 
+Code | Content
+--- |:---
+200 | Project Object JSON
+
+
+##### Error Response
+
+Code | Content
+--- |:---
+404 | `{ error : "The requested object could not be found" }`
+
 ##### Sample Call
+
+```javascript
+	$.ajax({
+		url: "/projects/1",
+		dataType: "json",
+		type : "GET",
+		success : function(r) {
+			console.log(r);
+		}
+	});
+```
 
 ----------
 
@@ -132,7 +155,7 @@ Creates and returns json data about a single new media project.
 
 ##### URL Params
 
-None
+`None`
 
 ##### Data Params
 
@@ -158,7 +181,32 @@ None
 
 ##### Success Response
 
+Code | Content
+--- |:---
+200 | Media Object JSON
+
+##### Error Response
+
+Code | Content
+--- |:---
+400 | `{ error : "You did not include all required fields" }`
+
+
 ##### Sample Call
+
+```javascript
+	$.ajax({
+		url: "/media",
+		dataType: "json",
+		data: [
+			"name": "Political Ads"
+		]
+		type : "POST",
+		success : function(r) {
+			console.log(r);
+		}
+	});
+```
 
 ----------
 
@@ -180,7 +228,7 @@ None
 
 ##### Data Params
 
-None
+`None`
 
 ##### Success Response
 
@@ -188,34 +236,25 @@ Code | Content
 --- |:---
 200 | Media Object JSON
 
-
 ##### Error Response
 
 Code | Content
 --- |:---
-400 | `{ error : "You did not include all required fields" }`
-
-
+404 | `{ error : "The requested object could not be found" }`
 
 ##### Sample Call
 
-----------
+```javascript
+	$.ajax({
+		url: "/media/12",
+		dataType: "json",
+		type : "GET",
+		success : function(r) {
+			console.log(r);
+		}
+	});
+```
 
-### Update Media
-
-##### URL
-
-##### Method
-
-##### URL Params
-
-##### Data Params
-
-###### Required
-
-##### Success Response
-
-##### Sample Call
 
 ----------
 
@@ -307,7 +346,7 @@ Once media is registered in the system it can be processed using fingerprinting 
 
 ##### URL Params
 
-None
+`None`
 
 ##### Data Params
 
@@ -318,7 +357,7 @@ None
 
 ###### Optional
 
-None
+`None`
 
 ###### Example
 
@@ -331,11 +370,37 @@ None
 
 ##### Success Response
 
+Code | Content
+--- |:---
+200 | Task Object JSON
+
+##### Error Response
+
+Code | Content
+--- |:---
+400 | `{ error : "You did not include all required fields" }`
+
+
 ##### Sample Call
+
+```javascript
+	$.ajax({
+		url: "/tasks",
+		dataType: "json",
+		data: [
+			"media_id": 12,
+			"task": "match"
+		]
+		type : "POST",
+		success : function(r) {
+			console.log(r);
+		}
+	});
+```
 
 ----------
 
-### Get Media Task
+### Get Task
 
 ##### URL
 
@@ -343,14 +408,42 @@ None
 
 ##### Method
 
-`POST`
+`GET`
+
 
 ##### URL Params
 
+###### Required
+
+ * `id`: The ID of the task being retrieved.
+
 ##### Data Params
 
-###### Required
+`None`
 
 ##### Success Response
 
+Code | Content
+--- |:---
+200 | Project Object JSON
+
+
+##### Error Response
+
+Code | Content
+--- |:---
+404 | `{ error : "The requested object could not be found" }`
+
+
 ##### Sample Call
+
+```javascript
+	$.ajax({
+		url: "/tasks/12",
+		dataType: "json",
+		type : "GET",
+		success : function(r) {
+			console.log(r);
+		}
+	});
+```
