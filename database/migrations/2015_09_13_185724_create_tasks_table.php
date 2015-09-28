@@ -16,16 +16,16 @@ class CreateTasksTable extends Migration
 
             // Create fields
             $table->increments('id');
-            $table->integer('project_id');
-            $table->text('fprint_url')->nullable();
-            $table->text('media_url')->nullable();
-            $table->string('image_id')->nullable();
-            $table->json('result')->nullable();
-            $table->integer('status');
+            $table->integer('media_id');
+            $table->string('type');
+            $table->string('status_code')->nullable();
+            $table->string('result_code')->nullable();
+            $table->json('result_data')->nullable();
+            $table->text('result_output')->nullable();
             $table->timestamps();
 
             // Create indexes
-            $table->foreign('project_id')->references('id')->on('projects')
+            $table->foreign('media_id')->references('id')->on('media')
                 ->onDelete('cascade');
         });
     }

@@ -48,6 +48,12 @@ Route::resource('/api/projects', 'ProjectController');
 
 
 /**
+ * REST for Media Model
+ */
+Route::resource('/api/media', 'MediaController');
+
+
+/**
  * REST for Task Model
  */
 Route::resource('/api/tasks', 'TaskController');

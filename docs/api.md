@@ -5,7 +5,7 @@
 ```json
 	{
 		"id": 12,
-		"name": "Political Ads",
+		"name": "Political Ads"
 	}
 ```
 
@@ -127,11 +127,11 @@ Code | Content
 ```json
 	{
 		"id": 12,
-		"audfprint": {
-			"candidate": true,
-			"corpus": false,
-			"distractor": false,
-			"target": false
+		"match_categorization": {
+			"is_candidate": true,
+			"is_corpus": false,
+			"is_distractor": false,
+			"is_target": false
 		},
 		"tasks": [],
 		"project_id": 12,
@@ -266,7 +266,7 @@ Code | Content
 	{
 		"id": 12,
 		"media_id": 12,
-		"task": "match",
+		"type": "match",
 		"status": {
 			"code": 0,
 			"description": "New task."
@@ -321,13 +321,9 @@ Code | Description
 ```
 
  * `corpus_add`: save the media as a corpus item.
- * `corpus_remove`: remove the media from the corpus.
  * `candidate_add`: add the media as a candidate item.
- * `candidate_remove`: remove the media from the candidates.
  * `distractor_add`: add the media as a distractor item.
- * `distractor_remove`: remove the media from the distractors.
  * `target_add`: add the media as a target item.
- * `target_remove`: remove the media from the targets.
 
 ####### Match results
 
@@ -353,7 +349,7 @@ Once media is registered in the system it can be processed using fingerprinting 
 ###### Required
 
  * `media_id`: The ID of the media file that this task will be invoked on.
- * `task`: The task to be performed (see "Task Types")
+ * `type`: The type of task to be performed (see "Task Types")
 
 ###### Optional
 
@@ -364,7 +360,7 @@ Once media is registered in the system it can be processed using fingerprinting 
 ```json
 	{
 		"media_id": 12,
-		"task": "match"
+		"type": "match"
 	}
 ```
 
@@ -389,7 +385,7 @@ Code | Content
 		dataType: "json",
 		data: [
 			"media_id": 12,
-			"task": "match"
+			"type": "match"
 		]
 		type : "POST",
 		success : function(r) {

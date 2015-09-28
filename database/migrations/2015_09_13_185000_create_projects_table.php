@@ -20,7 +20,7 @@ class CreateProjectsTable extends Migration
             $table->text('audf_corpus')->nullable();
             $table->text('audf_candidates')->nullable();
             $table->text('audf_matches')->nullable();
-            $table->text('audf_ignore')->nullable();
+            $table->text('audf_distractors')->nullable();
             $table->timestamps();
 
             // Create indexes

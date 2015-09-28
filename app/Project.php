@@ -6,6 +6,11 @@ use Illuminate\Database\Eloquent\Model;
 
 class Project extends Model
 {
+    // The following fields are provided out of the box by Eloquent
+    // - id
+    // - created_at
+    // - updated_at
+
     /**
      * The database table used by the model.
      *
@@ -25,12 +30,27 @@ class Project extends Model
      *
      * @var array
      */
-    protected $hidden = ['audf_corpus', 'audf_candidates', 'audf_matches', 'audf_ignore'];
+    protected $hidden = ['audf_corpus', 'audf_candidates', 'audf_targets', 'audf_distractors'];
 
     /**
-     * Specify 1:* relationship with Tasks
+     * Specify relationship with media
      */
-    public function tasks() {
-        return $this->hasMany('Duplitron\Task');
+    public function media() {
+        return $this->hasMany('Duplitron\Media');
+    }
+
+    // Audfprint can't create databases until there is something in it, so we need to know if each database has been set up yet
+    // TODO: modify Audfprint to allow empty databases to avoid this.
+    public function has_corpus() {
+        return $this->audf_corpus != null && file_exists(env('FPRINT_STORE').$this->audf_corpus);
+    }
+    public function has_candidates() {
+        return $this->audf_candidates != null && file_exists(env('FPRINT_STORE').$this->audf_candidates);
+    }
+    public function has_targets() {
+        return $this->audf_targets   != null && file_exists(env('FPRINT_STORE').$this->audf_targets);
+    }
+    public function has_distractors() {
+        return $this->audf_distractors != null && file_exists(env('FPRINT_STORE').$this->audf_distractors);
     }
 }

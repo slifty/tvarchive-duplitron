@@ -7,10 +7,9 @@ use Illuminate\Http\Request;
 use Duplitron\Http\Requests;
 use Duplitron\Http\Controllers\Controller;
 
-use Duplitron\Task;
-use Duplitron\Jobs\PerformMediaTask;
+use Duplitron\Media;
 
-class TaskController extends Controller
+class MediaController extends Controller
 {
     /**
      * Display a listing of the resource.
@@ -19,7 +18,7 @@ class TaskController extends Controller
      */
     public function index()
     {
-        return "";
+        //
     }
 
     /**
@@ -29,6 +28,7 @@ class TaskController extends Controller
      */
     public function create()
     {
+        //
     }
 
     /**
@@ -39,17 +39,14 @@ class TaskController extends Controller
      */
     public function store(Request $request)
     {
-        // Create a new task object
-        $task = new Task();
-        $task->status_code = Task::STATUS_NEW;
-        $task->media_id = $request->input('media_id');
-        $task->type = $request->input('type');
-        $task->save();
+        //
+        $media = new Media();
+        $media->project_id = $request->input('project_id');
+        $media->media_path = $request->input('media_path');
+        $media->afpt_path = '';
+        $media->save();
 
-        // Dispatch a job for this task
-        $this->dispatch(new PerformMediaTask($task));
-
-        return $task;
+        return $media;
     }
 
     /**
@@ -60,8 +57,7 @@ class TaskController extends Controller
      */
     public function show($id)
     {
-        $task = Task::find($id);
-        return $task;
+        //
     }
 
     /**
