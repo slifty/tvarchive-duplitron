@@ -141,6 +141,10 @@ class PerformMediaTask extends Job implements SelfHandling, ShouldQueue
         return $logs;
     }
 
+    /**
+     * Run a media file through the matching algorithm, comparing with all four corpuses
+     * @param  string $media_file A path to the locally available media file
+     */
     private function runMatch($media_file) {
         $media = $this->task->media;
         $project = $media->project;
@@ -160,7 +164,7 @@ class PerformMediaTask extends Job implements SelfHandling, ShouldQueue
             $cmd = ['match', '-d', PerformMediaTask::AUDFPRINT_DOCKER_PATH.$project->audf_corpus, '--find-time-range', '-x', '1000', PerformMediaTask::AUDFPRINT_DOCKER_PATH.$media_file];
             $corpus_logs = $this->runDocker($cmd);
             $task_logs = array_merge($task_logs, $corpus_logs);
-            $corpus_results = $this->processAudfMatch($corpus_logs);
+            $corpus_results = $this->processAudfMatchLog($corpus_logs);
             array_walk($corpus_results, function(&$result)
             {
                 $result['type'] = PerformMediaTask::MATCH_CORPUS;
@@ -173,7 +177,7 @@ class PerformMediaTask extends Job implements SelfHandling, ShouldQueue
             $cmd = ['match', '-d', PerformMediaTask::AUDFPRINT_DOCKER_PATH.$project->audf_candidates, '--find-time-range', '-x', '1000', PerformMediaTask::AUDFPRINT_DOCKER_PATH.$media_file];
             $candidates_logs = $this->runDocker($cmd);
             $task_logs = array_merge($task_logs, $candidates_logs);
-            $candidates_results = $this->processAudfMatch($candidates_logs);
+            $candidates_results = $this->processAudfMatchLog($candidates_logs);
             array_walk($candidates_results, function(&$result)
             {
                 $result['type'] = PerformMediaTask::MATCH_CANDIDATE;
@@ -186,7 +190,7 @@ class PerformMediaTask extends Job implements SelfHandling, ShouldQueue
             $cmd = ['match', '-d', PerformMediaTask::AUDFPRINT_DOCKER_PATH.$project->audf_distractors, '--find-time-range', '-x', '1000', PerformMediaTask::AUDFPRINT_DOCKER_PATH.$media_file];
             $distractors_logs = $this->runDocker($cmd);
             $task_logs = array_merge($task_logs, $distractors_logs);
-            $distractors_results = $this->processAudfMatch($distractors_logs);
+            $distractors_results = $this->processAudfMatchLog($distractors_logs);
             array_walk($distractors_results, function(&$result)
             {
                 $result['type'] = PerformMediaTask::MATCH_DISTRACTOR;
@@ -199,7 +203,7 @@ class PerformMediaTask extends Job implements SelfHandling, ShouldQueue
             $cmd = ['match', '-d', PerformMediaTask::AUDFPRINT_DOCKER_PATH.$project->audf_targets, '--find-time-range', '-x', '1000', PerformMediaTask::AUDFPRINT_DOCKER_PATH.$media_file];
             $targets_logs = $this->runDocker($cmd);
             $task_logs = array_merge($task_logs, $targets_logs);
-            $targets_results = $this->processAudfMatch($targets_logs);
+            $targets_results = $this->processAudfMatchLog($targets_logs);
             array_walk($targets_results, function(&$result)
             {
                 $result['type'] = PerformMediaTask::MATCH_TARGET;
@@ -214,19 +218,28 @@ class PerformMediaTask extends Job implements SelfHandling, ShouldQueue
         // Create a master list of matches
         $matches = array_merge($corpus_results, $candidates_results, $distractors_results, $targets_results);
 
-        // Sort the list by start time
-        usort($matches, function($a, $b)
+        // Sort all matches list by start time
+        $start_sort = function($a, $b)
         {
             if($a['start'] < $b['start'])
                 return -1;
             if($a['start'] > $b['start'])
                 return 1;
             return 0;
-        });
+        };
+        usort($matches, $start_sort);
+        usort($corpus_results, $start_sort);
+        usort($candidates_results, $start_sort);
+        usort($distractors_results, $start_sort);
+        usort($targets_results, $start_sort);
 
-        // Resolve any overlapping matches
+        // Consolidate matches involving the same file
+
+
+
+        // Map the input file to segments based on the matches
         // Distractor -> Target -> Candidate -> Corpus
-        $timeline = [];
+        $segments = [];
         $start = -1;
         $end = -1;
         $type = '';
@@ -278,15 +291,28 @@ class PerformMediaTask extends Job implements SelfHandling, ShouldQueue
                     'matched_files' => array_unique($matched_files)
                 ];
 
-                array_push($timeline, $final_match);
+                array_push($segments, $final_match);
                 $is_new_match = true;
             }
+
+            // Add the next back to the list
+            array_unshift($matches, $next_match);
         }
 
-        $this->task->result_data = json_encode($timeline);
+        $results = [
+            "matches" => [
+                "candidates" => $candidates_results,
+                "corpus" => $corpus_results,
+                "distractors" => $distractors_results,
+                "targets" => $targets_results
+            ],
+            "segments" => $segments
+        ];
+        $this->task->result_data = json_encode($results);
         $this->task->result_output = json_encode($task_logs);
         $this->task->save();
     }
+
 
     /**
      * TODO: This method will hopefully be deleted some day, and audfprint will just return structured data
@@ -294,7 +320,7 @@ class PerformMediaTask extends Job implements SelfHandling, ShouldQueue
      * @param  string[] $logs The log output from an audf process
      * @return object[]       The list of matches
      */
-    private function processAudfMatch($logs) {
+    private function processAudfMatchLog($logs) {
         $matches = [];
         foreach($logs as $line) {
             $match_pattern = '/Matched\s+(\S+)\s+s\s+starting\s+at\s+(\S+)\s+s\s+in\s+(\S+)\s+to\s+time\s+(\S+)\s+s\s+in\s+(\S+)\s+with\s+(\S+)\s+of\s+(\S+)\s+common\s+hashes\s+at\s+rank\s+(\S+)/';
