@@ -55,7 +55,8 @@ class ProjectController extends Controller
      */
     public function show($id)
     {
-        //
+        $task = Project::find($id);
+        return $task;
     }
 
     /**

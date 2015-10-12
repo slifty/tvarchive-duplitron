@@ -57,7 +57,8 @@ class MediaController extends Controller
      */
     public function show($id)
     {
-        //
+        $task = Media::find($id);
+        return $task;
     }
 
     /**

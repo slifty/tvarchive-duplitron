@@ -3,6 +3,7 @@
 namespace Duplitron\Jobs;
 
 use Duplitron\Task;
+use Duplitron\Media;
 use Duplitron\Jobs\Job;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Queue\InteractsWithQueue;
@@ -235,8 +236,6 @@ class PerformMediaTask extends Job implements SelfHandling, ShouldQueue
 
         // Consolidate matches involving the same file
 
-
-
         // Map the input file to segments based on the matches
         // Distractor -> Target -> Candidate -> Corpus
         $segments = [];
@@ -256,16 +255,12 @@ class PerformMediaTask extends Job implements SelfHandling, ShouldQueue
                 $start = $match['start'];
                 $end = $match['start'] + $match['duration'];
                 $type = $match['type'];
-                $matched_files = [$match['matched_file']];
                 $is_new_match = false;
             }
             else
             {
                 // Merge overlap
                 $end = max($end, $match['start'] + $match['duration']);
-
-                // Store the file
-                array_push($matched_files, $match['matched_file']);
 
                 // Resolve types (combine and pick the dominant type)
                 if($match['type'] == PerformMediaTask::MATCH_DISTRACTOR ||
@@ -287,8 +282,7 @@ class PerformMediaTask extends Job implements SelfHandling, ShouldQueue
                 $final_match = [
                     'start' => $start,
                     'end' => $end,
-                    'type' => $type,
-                    'matched_files' => array_unique($matched_files)
+                    'type' => $type
                 ];
 
                 array_push($segments, $final_match);
@@ -331,11 +325,19 @@ class PerformMediaTask extends Job implements SelfHandling, ShouldQueue
                 // duration -> the duration of the match
                 // start -> where in the INPUT file the match starts
                 // target_start -> where in the MATCHED file the match starts
+
+                // The file name has a distinct pattern that contains the media ID in the system
+                $file_pattern = '/.*task\_media\-(\d*)\..*/';
+                preg_match($file_pattern, $match_data[5], $file_data);
+
+                $destination_task = Task::find($file_data[1]);
+
                 $match = [
                     "matched_file" => $match_data[5],
                     "duration" => floatval($match_data[1]),
                     "start" => floatval($match_data[2]),
                     "target_start" => floatval($match_data[4]),
+                    "destination_media" => $destination_task?$destination_task->media:null
                 ];
 
                 array_push($matches, $match);
@@ -361,8 +363,10 @@ class PerformMediaTask extends Job implements SelfHandling, ShouldQueue
             $project->save();
         }
 
-        $cmd = [($isNew?'new':'add'), '-d', PerformMediaTask::AUDFPRINT_DOCKER_PATH.$project->audf_corpus, PerformMediaTask::AUDFPRINT_DOCKER_PATH.$media_file];
+        $cmd = [$audf_command, '-d', PerformMediaTask::AUDFPRINT_DOCKER_PATH.$project->audf_corpus, PerformMediaTask::AUDFPRINT_DOCKER_PATH.$media_file];
         $this->runDocker($cmd);
+        $media->is_corpus = true;
+        $media->save();
     }
 
     private function addCandidatesItem($media_file) {
@@ -384,6 +388,8 @@ class PerformMediaTask extends Job implements SelfHandling, ShouldQueue
 
         $cmd = [$audf_command, '-d', PerformMediaTask::AUDFPRINT_DOCKER_PATH.$project->audf_candidates, PerformMediaTask::AUDFPRINT_DOCKER_PATH.$media_file];
         $this->runDocker($cmd);
+        $media->is_candidate = true;
+        $media->save();
     }
 
     private function addDistractorsItem($media_file) {
@@ -405,6 +411,8 @@ class PerformMediaTask extends Job implements SelfHandling, ShouldQueue
 
         $cmd = [$audf_command, '-d', PerformMediaTask::AUDFPRINT_DOCKER_PATH.$project->audf_distractors, PerformMediaTask::AUDFPRINT_DOCKER_PATH.$media_file];
         $this->runDocker($cmd);
+        $media->is_distractor = true;
+        $media->save();
     }
 
     private function addTargetsItem($media_file) {
@@ -426,5 +434,7 @@ class PerformMediaTask extends Job implements SelfHandling, ShouldQueue
 
         $cmd = [$audf_command, '-d', PerformMediaTask::AUDFPRINT_DOCKER_PATH.$project->audf_targets, PerformMediaTask::AUDFPRINT_DOCKER_PATH.$media_file];
         $this->runDocker($cmd);
+        $media->is_target = true;
+        $media->save();
     }
 }

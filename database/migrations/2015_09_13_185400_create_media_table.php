@@ -19,6 +19,7 @@ class CreateMediaTable extends Migration
             $table->integer('project_id');
             $table->text('media_path');
             $table->text('afpt_path');
+            $table->text('external_id')->nullable();
             $table->boolean('is_candidate')->default(false);
             $table->boolean('is_corpus')->default(false);
             $table->boolean('is_distractor')->default(false);
