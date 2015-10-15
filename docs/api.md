@@ -128,7 +128,7 @@ Code | Content
 	{
 		"id": 12,
 		"match_categorization": {
-			"is_candidate": true,
+			"is_potential_target": true,
 			"is_corpus": false,
 			"is_distractor": false,
 			"is_target": false
@@ -313,7 +313,7 @@ Code | Description
 		"duration": 30,
 	}],
 	"segments": [{
-		"segment_type": "candidate",
+		"segment_type": "potential_target",
 		"start_time": "",
 		"duration": ""
 	}]
@@ -321,7 +321,7 @@ Code | Description
 ```
 
  * `corpus_add`: save the media as a corpus item.
- * `candidate_add`: add the media as a candidate item.
+ * `potential_target_add`: add the media as a potential target item.
  * `distractor_add`: add the media as a distractor item.
  * `target_add`: add the media as a target item.
 

@@ -18,7 +18,7 @@ class CreateProjectsTable extends Migration
             $table->increments('id');
             $table->text('name');
             $table->text('audf_corpus')->nullable();
-            $table->text('audf_candidates')->nullable();
+            $table->text('audf_potential_targets')->nullable();
             $table->text('audf_matches')->nullable();
             $table->text('audf_distractors')->nullable();
             $table->timestamps();

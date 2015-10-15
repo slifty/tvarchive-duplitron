@@ -21,7 +21,7 @@ class PerformMediaTask extends Job implements SelfHandling, ShouldQueue
 
 
     // TODO: We probably want to create a "matches" model
-    const MATCH_CANDIDATE = 'candidatess';
+    const MATCH_POTENTIAL_TARGET = 'potential_targets';
     const MATCH_CORPUS = 'corpus';
     const MATCH_DISTRACTOR = 'distractors';
     const MATCH_TARGET = 'targets';
@@ -58,8 +58,8 @@ class PerformMediaTask extends Job implements SelfHandling, ShouldQueue
                 $this->addCorpusItem($media_file);
                 break;
 
-            case Task::TYPE_CANDIDATE_ADD:
-                $this->addCandidatesItem($media_file);
+            case Task::TYPE_POTENTIAL_TARGET_ADD:
+                $this->addPotentialTargetsItem($media_file);
                 break;
 
             case Task::TYPE_DISTRACTOR_ADD:
@@ -139,6 +139,9 @@ class PerformMediaTask extends Job implements SelfHandling, ShouldQueue
             $logs = array_merge($logs,explode("\n", $output));
         });
 
+        $this->task->status_code = Task::STATUS_FINISHED;
+        $this->task->save();
+
         return $logs;
     }
 
@@ -152,7 +155,7 @@ class PerformMediaTask extends Job implements SelfHandling, ShouldQueue
 
         $task_logs = [];
         $corpus_results = [];
-        $candidates_results = [];
+        $potential_targets_results = [];
         $distractors_results = [];
         $targets_results = [];
 
@@ -172,16 +175,16 @@ class PerformMediaTask extends Job implements SelfHandling, ShouldQueue
             });
         }
 
-        // Find matches with candidate items
-        if($project->has_candidates())
+        // Find matches with potential target items
+        if($project->has_potential_targets())
         {
-            $cmd = ['match', '-d', PerformMediaTask::AUDFPRINT_DOCKER_PATH.$project->audf_candidates, '--find-time-range', '-x', '1000', PerformMediaTask::AUDFPRINT_DOCKER_PATH.$media_file];
-            $candidates_logs = $this->runDocker($cmd);
-            $task_logs = array_merge($task_logs, $candidates_logs);
-            $candidates_results = $this->processAudfMatchLog($candidates_logs);
-            array_walk($candidates_results, function(&$result)
+            $cmd = ['match', '-d', PerformMediaTask::AUDFPRINT_DOCKER_PATH.$project->audf_potential_targets, '--find-time-range', '-x', '1000', PerformMediaTask::AUDFPRINT_DOCKER_PATH.$media_file];
+            $potential_targets_logs = $this->runDocker($cmd);
+            $task_logs = array_merge($task_logs, $potential_targets_logs);
+            $potential_targets_results = $this->processAudfMatchLog($potential_targets_logs);
+            array_walk($potential_targets_results, function(&$result)
             {
-                $result['type'] = PerformMediaTask::MATCH_CANDIDATE;
+                $result['type'] = PerformMediaTask::MATCH_POTENTIAL_TARGET;
             });
         }
 
@@ -217,7 +220,7 @@ class PerformMediaTask extends Job implements SelfHandling, ShouldQueue
         //
 
         // Create a master list of matches
-        $matches = array_merge($corpus_results, $candidates_results, $distractors_results, $targets_results);
+        $matches = array_merge($corpus_results, $potential_targets_results, $distractors_results, $targets_results);
 
         // Sort all matches list by start time
         $start_sort = function($a, $b)
@@ -230,14 +233,14 @@ class PerformMediaTask extends Job implements SelfHandling, ShouldQueue
         };
         usort($matches, $start_sort);
         usort($corpus_results, $start_sort);
-        usort($candidates_results, $start_sort);
+        usort($potential_targets_results, $start_sort);
         usort($distractors_results, $start_sort);
         usort($targets_results, $start_sort);
 
         // Consolidate matches involving the same file
 
         // Map the input file to segments based on the matches
-        // Distractor -> Target -> Candidate -> Corpus
+        // Distractor -> Target -> Potential Target -> Corpus
         $segments = [];
         $start = -1;
         $end = -1;
@@ -269,9 +272,9 @@ class PerformMediaTask extends Job implements SelfHandling, ShouldQueue
                 else if($match['type'] == PerformMediaTask::MATCH_TARGET ||
                     $type == PerformMediaTask::MATCH_TARGET)
                     $type = PerformMediaTask::MATCH_TARGET;
-                else if($match['type'] == PerformMediaTask::MATCH_CANDIDATE ||
-                    $type == PerformMediaTask::MATCH_CANDIDATE)
-                    $type = PerformMediaTask::MATCH_CANDIDATE;
+                else if($match['type'] == PerformMediaTask::MATCH_POTENTIAL_TARGET ||
+                    $type == PerformMediaTask::MATCH_POTENTIAL_TARGET)
+                    $type = PerformMediaTask::MATCH_POTENTIAL_TARGET;
                 else if($match['type'] == PerformMediaTask::MATCH_CORPUS ||
                     $type == PerformMediaTask::MATCH_CORPUS)
                     $type = PerformMediaTask::MATCH_CORPUS;
@@ -295,7 +298,7 @@ class PerformMediaTask extends Job implements SelfHandling, ShouldQueue
 
         $results = [
             "matches" => [
-                "candidates" => $candidates_results,
+                "potential_targets" => $potential_targets_results,
                 "corpus" => $corpus_results,
                 "distractors" => $distractors_results,
                 "targets" => $targets_results
@@ -369,11 +372,11 @@ class PerformMediaTask extends Job implements SelfHandling, ShouldQueue
         $media->save();
     }
 
-    private function addCandidatesItem($media_file) {
+    private function addPotentialTargetsItem($media_file) {
         $media = $this->task->media;
         $project = $media->project;
 
-        if($project->has_candidates())
+        if($project->has_potential_targets())
         {
             // Add to an existing corpus
             $audf_command = 'add';
@@ -382,13 +385,13 @@ class PerformMediaTask extends Job implements SelfHandling, ShouldQueue
         {
             // Create a corpus from this item
             $audf_command = 'new';
-            $project->audf_candidates = "project_".$project->id."-candidates.pklz";
+            $project->audf_potential_targets = "project_".$project->id."-potential_targets.pklz";
             $project->save();
         }
 
-        $cmd = [$audf_command, '-d', PerformMediaTask::AUDFPRINT_DOCKER_PATH.$project->audf_candidates, PerformMediaTask::AUDFPRINT_DOCKER_PATH.$media_file];
+        $cmd = [$audf_command, '-d', PerformMediaTask::AUDFPRINT_DOCKER_PATH.$project->audf_potential_targets, PerformMediaTask::AUDFPRINT_DOCKER_PATH.$media_file];
         $this->runDocker($cmd);
-        $media->is_candidate = true;
+        $media->is_potential_target = true;
         $media->save();
     }
 

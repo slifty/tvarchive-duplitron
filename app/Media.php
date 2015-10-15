@@ -30,7 +30,7 @@ class Media extends Model
      *
      * @var array
      */
-    protected $hidden = ['is_candidate', 'is_corpus', 'is_distractor', 'is_target'];
+    protected $hidden = ['is_potential_target', 'is_corpus', 'is_distractor', 'is_target'];
 
     /**
      * The accessors to append to the model's array form.
@@ -72,7 +72,7 @@ class Media extends Model
      */
     public function getMatchCategorizationAttribute() {
         return $this->attributes['match_categorization'] = [
-            'is_candidate' => $this->is_candidate,
+            'is_potential_target' => $this->is_potential_target,
             'is_corpus' => $this->is_corpus,
             'is_distractor' => $this->is_distractor,
             'is_target' => $this->is_target

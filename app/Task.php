@@ -15,8 +15,8 @@ class Task extends Model
     const TYPE_MATCH = 'match';
     const TYPE_CORPUS_ADD = 'corpus_add';
     const TYPE_CORPUS_REMOVE = 'corpus_remove';
-    const TYPE_CANDIDATE_ADD = 'candidate_add';
-    const TYPE_CANDIDATE_REMOVE = 'candidate_remove';
+    const TYPE_POTENTIAL_TARGET_ADD = 'potential_target_add';
+    const TYPE_POTENTIAL_TARGET_REMOVE = 'potential_target_remove';
     const TYPE_DISTRACTOR_ADD = 'distractor_add';
     const TYPE_DISTRACTOR_REMOVE = 'distractor_remove';
     const TYPE_TARGET_ADD = 'target_add';

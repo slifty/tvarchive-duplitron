@@ -30,7 +30,7 @@ class Project extends Model
      *
      * @var array
      */
-    protected $hidden = ['audf_corpus', 'audf_candidates', 'audf_targets', 'audf_distractors'];
+    protected $hidden = ['audf_corpus', 'audf_potential_targets', 'audf_targets', 'audf_distractors'];
 
     /**
      * Specify relationship with media
@@ -44,8 +44,8 @@ class Project extends Model
     public function has_corpus() {
         return $this->audf_corpus != null && file_exists(env('FPRINT_STORE').$this->audf_corpus);
     }
-    public function has_candidates() {
-        return $this->audf_candidates != null && file_exists(env('FPRINT_STORE').$this->audf_candidates);
+    public function has_potential_targets() {
+        return $this->audf_potential_targets != null && file_exists(env('FPRINT_STORE').$this->audf_potential_targets);
     }
     public function has_targets() {
         return $this->audf_targets   != null && file_exists(env('FPRINT_STORE').$this->audf_targets);
