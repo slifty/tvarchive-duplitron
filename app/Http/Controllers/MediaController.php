@@ -41,11 +41,33 @@ class MediaController extends Controller
     {
         //
         $media = new Media();
-        $media->project_id = $request->input('project_id');
-        $media->media_path = $request->input('media_path');
-        $media->afpt_path = '';
-        $media->save();
 
+
+        $media->project_id = $request->input('project_id');
+
+        // Media can be created in two ways:
+        // 1) A media path or an audf path (TODO: implement this)
+        // 2) As a subsection of an existing media file
+        if($request->has('base_media_id'))
+        {
+            $base_media = Media::find($request->input('base_media_id'));
+            $media->media_path = $base_media->media_path;
+            $media->afpt_path = $base_media->afpt_path;
+        }
+        else
+        {
+            $media->media_path = $request->input('media_path');
+            $media->afpt_path = '';
+        }
+
+        // Sometimes the media we want to track is a subset of the full media
+        if($request->has('start'))
+        {
+            $media->start = $request->input('start');
+            $media->duration = $request->input('duration');
+        }
+
+        $media->save();
         return $media;
     }
 

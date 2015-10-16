@@ -43,6 +43,7 @@ class PerformMediaTask extends Job implements SelfHandling, ShouldQueue
      */
     public function handle()
     {
+
         // Load the media file locally
         $media_file = $this->loadFile($this->task->media);
 
@@ -93,12 +94,38 @@ class PerformMediaTask extends Job implements SelfHandling, ShouldQueue
         $file_type = $parsed_path['extension'];
 
         $temp_media_file = "task_media-".$this->task->id.".".$file_type;
+        $temp_media_path = env('FPRINT_STORE').$temp_media_file;
 
         // Run an rsync to get a local copy
         // NOTE: This feels dirty, but so it goes.
         // TODO: support HTTP, not just rsync
         $ssh_command = 'ssh -i '.env('RSYNC_IDENTITY_FILE');
-        shell_exec('/usr/bin/rsync -az -e \''.$ssh_command.'\' '.$media_user.'@'.$media_host.':'.$media_path.' '.env('FPRINT_STORE').$temp_media_file);
+        shell_exec('/usr/bin/rsync -az -e \''.$ssh_command.'\' '.$media_user.'@'.$media_host.':'.$media_path.' '.$temp_media_path);
+
+        // If the media has a listed start / duration, slice it down
+        if($media->duration > 0)
+        {
+
+            // Specify the configuration for PHPVideoToolkit
+            $config = new \PHPVideoToolkit\Config(array(
+                'temp_directory' => '/tmp',
+                'ffmpeg' => env('FFMPEG_BINARY_PATH'),
+                'ffprobe' => env('FFPROBE_BINARY_PATH'),
+                'yamdi' => '',
+                'qtfaststart' => '',
+            ), true);
+
+            // Extract the section we care about
+            $start = new \PHPVideoToolkit\Timecode($media->start);
+            $end = new \PHPVideoToolkit\Timecode($media->start + $media->duration);
+            $audio  = new \PHPVideoToolkit\Audio($temp_media_path, null, null, false);
+            $command = $audio->extractSegment($start, $end);
+
+            // We need to save as a separate file then overwrite
+            $trimmed_media_path = $temp_media_path."trimmed.mp3";
+            $process = $command->save($trimmed_media_path, null, true);
+            rename($trimmed_media_path, $temp_media_path);
+        }
 
         return $temp_media_file;
     }

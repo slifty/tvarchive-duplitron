@@ -23,7 +23,7 @@ class Media extends Model
      *
      * @var array
      */
-    protected $fillable = ['media_path', 'afpt_path', 'external_id'];
+    protected $fillable = ['media_path', 'afpt_path', 'external_id', 'start', 'duration'];
 
     /**
      * The attributes excluded from the model's JSON form.
@@ -51,6 +51,20 @@ class Media extends Model
      */
     public function project() {
         return $this->belongsTo('Duplitron\Project');
+    }
+
+    /**
+     * Specify relationship with Project
+     */
+    public function baseMedia() {
+        return $this->belongsTo('Duplitron\Media', 'base_media_id');
+    }
+
+    /**
+     * Specify relationship with Project
+     */
+    public function childMedia() {
+        return $this->belongsTo('Duplitron\Media', 'base_media_id');
     }
 
     /**
