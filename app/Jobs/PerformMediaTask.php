@@ -45,30 +45,30 @@ class PerformMediaTask extends Job implements SelfHandling, ShouldQueue
     {
 
         // Load the media file locally
-        $media_file = $this->loadFile($this->task->media);
+        $afpt_file = $this->prepareMedia($this->task->media);
 
         // Run the Docker commands based on the task type
         switch($this->task->type)
         {
             case Task::TYPE_MATCH:
 
-                $this->runMatch($media_file);
+                $this->runMatch($afpt_file);
                 break;
 
             case Task::TYPE_CORPUS_ADD:
-                $this->addCorpusItem($media_file);
+                $this->addCorpusItem($afpt_file);
                 break;
 
             case Task::TYPE_POTENTIAL_TARGET_ADD:
-                $this->addPotentialTargetsItem($media_file);
+                $this->addPotentialTargetsItem($afpt_file);
                 break;
 
             case Task::TYPE_DISTRACTOR_ADD:
-                $this->addDistractorsItem($media_file);
+                $this->addDistractorsItem($afpt_file);
                 break;
 
             case Task::TYPE_TARGET_ADD:
-                $this->addTargetsItem($media_file);
+                $this->addTargetsItem($afpt_file);
                 break;
         }
 
@@ -77,10 +77,11 @@ class PerformMediaTask extends Job implements SelfHandling, ShouldQueue
     /**
      * Copy a file from a remote location to our temporary storage directory
      * TODO: Support precomputed fingerprint files, not just media files
+     * TODO: this belongs in a provider or some other kind of utility
      * @param  string $path an ssh:// protocol path
      * @return string The new file name
      */
-    private function loadFile($media)
+    private function loadMedia($media)
     {
         $path = $media->media_path;
 
@@ -93,8 +94,12 @@ class PerformMediaTask extends Job implements SelfHandling, ShouldQueue
         $parsed_path = pathinfo($media_path);
         $file_type = $parsed_path['extension'];
 
-        $temp_media_file = "task_media-".$this->task->id.".".$file_type;
-        $temp_media_path = env('FPRINT_STORE').$temp_media_file;
+        $temp_media_file = "media-".$this->task->media->id.".".$file_type;
+        $temp_media_path = env('FPRINT_STORE').'media_cache/'.$temp_media_file;
+
+        // Do we have a copy of this media cached?
+        if(file_exists($temp_media_path))
+            return $temp_media_path;
 
         // Run an rsync to get a local copy
         // NOTE: This feels dirty, but so it goes.
@@ -129,6 +134,7 @@ class PerformMediaTask extends Job implements SelfHandling, ShouldQueue
 
         return $temp_media_file;
     }
+
 
     /**
      * Create and run a docker image
@@ -173,10 +179,43 @@ class PerformMediaTask extends Job implements SelfHandling, ShouldQueue
     }
 
     /**
+     * Make sure the media has been loaded and preprocessed
+     * @param  object $media the media file we're going to be working with
+     * @return boolean whether or not the media is properly loaded
+     */
+    private function prepareMedia($media)
+    {
+        // Nail down the name of the fingerprint file
+        // TODO: fprint_file should probably be stored in the DB.  Right now we're relying on the filename matching a pattern from the loadMedia() step.  Bad form.
+        $fprint_file = 'media-'.$this->task->media->id.'.afpt';
+        $fprint_path = env('FPRINT_STORE').'afpt_cache/'.$fprint_file;
+
+        // Do we have a fingerprint cached?
+        if(file_exists($fprint_path))
+            return $fprint_file;
+
+        // Are we using a subset of the media / do we need to generate our own fprint?
+        // TODO: for now we will ALWAYS generate an fprint if we don't have a cached one.  In future we will want to see if the fingerprint path is set and attempt to load it.
+
+        // Load the media
+        $media_file = $this->loadMedia($media);
+
+        // Precompute the media
+        $cmd = ['precompute', PerformMediaTask::AUDFPRINT_DOCKER_PATH.'media_cache/'.$media_file];
+        $corpus_logs = $this->runDocker($cmd);
+
+        // Move the precompute file
+        $media_path = env('FPRINT_STORE').'media_cache/'.$fprint_file;
+        rename($media_path, $fprint_path);
+
+        return $fprint_file;
+    }
+
+    /**
      * Run a media file through the matching algorithm, comparing with all four corpuses
      * @param  string $media_file A path to the locally available media file
      */
-    private function runMatch($media_file) {
+    private function runMatch($afpt_file) {
         $media = $this->task->media;
         $project = $media->project;
 
@@ -188,11 +227,10 @@ class PerformMediaTask extends Job implements SelfHandling, ShouldQueue
 
         /////
         // Find all matches with stored items
-
         // Find matches with corpus items
         if($project->has_corpus())
         {
-            $cmd = ['match', '-d', PerformMediaTask::AUDFPRINT_DOCKER_PATH.$project->audf_corpus, '--find-time-range', '-x', '1000', PerformMediaTask::AUDFPRINT_DOCKER_PATH.$media_file];
+            $cmd = ['match', '-d', PerformMediaTask::AUDFPRINT_DOCKER_PATH.$project->audf_corpus, '--find-time-range', '-x', '1000', PerformMediaTask::AUDFPRINT_DOCKER_PATH.'afpt_cache/'.$afpt_file];
             $corpus_logs = $this->runDocker($cmd);
             $task_logs = array_merge($task_logs, $corpus_logs);
             $corpus_results = $this->processAudfMatchLog($corpus_logs);
@@ -205,7 +243,7 @@ class PerformMediaTask extends Job implements SelfHandling, ShouldQueue
         // Find matches with potential target items
         if($project->has_potential_targets())
         {
-            $cmd = ['match', '-d', PerformMediaTask::AUDFPRINT_DOCKER_PATH.$project->audf_potential_targets, '--find-time-range', '-x', '1000', PerformMediaTask::AUDFPRINT_DOCKER_PATH.$media_file];
+            $cmd = ['match', '-d', PerformMediaTask::AUDFPRINT_DOCKER_PATH.$project->audf_potential_targets, '--find-time-range', '-x', '1000', PerformMediaTask::AUDFPRINT_DOCKER_PATH.'afpt_cache/'.$afpt_file];
             $potential_targets_logs = $this->runDocker($cmd);
             $task_logs = array_merge($task_logs, $potential_targets_logs);
             $potential_targets_results = $this->processAudfMatchLog($potential_targets_logs);
@@ -218,7 +256,7 @@ class PerformMediaTask extends Job implements SelfHandling, ShouldQueue
         // Find matches with distractor items
         if($project->has_distractors())
         {
-            $cmd = ['match', '-d', PerformMediaTask::AUDFPRINT_DOCKER_PATH.$project->audf_distractors, '--find-time-range', '-x', '1000', PerformMediaTask::AUDFPRINT_DOCKER_PATH.$media_file];
+            $cmd = ['match', '-d', PerformMediaTask::AUDFPRINT_DOCKER_PATH.$project->audf_distractors, '--find-time-range', '-x', '1000', PerformMediaTask::AUDFPRINT_DOCKER_PATH.'afpt_cache/'.$afpt_file];
             $distractors_logs = $this->runDocker($cmd);
             $task_logs = array_merge($task_logs, $distractors_logs);
             $distractors_results = $this->processAudfMatchLog($distractors_logs);
@@ -231,7 +269,7 @@ class PerformMediaTask extends Job implements SelfHandling, ShouldQueue
         // Find matches with target items
         if($project->has_targets())
         {
-            $cmd = ['match', '-d', PerformMediaTask::AUDFPRINT_DOCKER_PATH.$project->audf_targets, '--find-time-range', '-x', '1000', PerformMediaTask::AUDFPRINT_DOCKER_PATH.$media_file];
+            $cmd = ['match', '-d', PerformMediaTask::AUDFPRINT_DOCKER_PATH.$project->audf_targets, '--find-time-range', '-x', '1000', PerformMediaTask::AUDFPRINT_DOCKER_PATH.'afpt_cache/'.$afpt_file];
             $targets_logs = $this->runDocker($cmd);
             $task_logs = array_merge($task_logs, $targets_logs);
             $targets_results = $this->processAudfMatchLog($targets_logs);
@@ -357,17 +395,17 @@ class PerformMediaTask extends Job implements SelfHandling, ShouldQueue
                 // target_start -> where in the MATCHED file the match starts
 
                 // The file name has a distinct pattern that contains the media ID in the system
-                $file_pattern = '/.*task\_media\-(\d*)\..*/';
+                $file_pattern = '/.*media\-(\d*)\..*/';
                 preg_match($file_pattern, $match_data[5], $file_data);
 
-                $destination_task = Task::find($file_data[1]);
+                $destination_media = Media::find($file_data[1]);
 
                 $match = [
                     "matched_file" => $match_data[5],
                     "duration" => floatval($match_data[1]),
                     "start" => floatval($match_data[2]),
                     "target_start" => floatval($match_data[4]),
-                    "destination_media" => $destination_task?$destination_task->media:null
+                    "destination_media" => $destination_media
                 ];
 
                 array_push($matches, $match);
@@ -376,7 +414,7 @@ class PerformMediaTask extends Job implements SelfHandling, ShouldQueue
         return $matches;
     }
 
-    private function addCorpusItem($media_file) {
+    private function addCorpusItem($afpt_file) {
         $media = $this->task->media;
         $project = $media->project;
 
@@ -393,13 +431,13 @@ class PerformMediaTask extends Job implements SelfHandling, ShouldQueue
             $project->save();
         }
 
-        $cmd = [$audf_command, '-d', PerformMediaTask::AUDFPRINT_DOCKER_PATH.$project->audf_corpus, PerformMediaTask::AUDFPRINT_DOCKER_PATH.$media_file];
+        $cmd = [$audf_command, '-d', PerformMediaTask::AUDFPRINT_DOCKER_PATH.$project->audf_corpus, PerformMediaTask::AUDFPRINT_DOCKER_PATH.'afpt_cache/'.$afpt_file];
         $this->runDocker($cmd);
         $media->is_corpus = true;
         $media->save();
     }
 
-    private function addPotentialTargetsItem($media_file) {
+    private function addPotentialTargetsItem($afpt_file) {
         $media = $this->task->media;
         $project = $media->project;
 
@@ -416,13 +454,13 @@ class PerformMediaTask extends Job implements SelfHandling, ShouldQueue
             $project->save();
         }
 
-        $cmd = [$audf_command, '-d', PerformMediaTask::AUDFPRINT_DOCKER_PATH.$project->audf_potential_targets, PerformMediaTask::AUDFPRINT_DOCKER_PATH.$media_file];
+        $cmd = [$audf_command, '-d', PerformMediaTask::AUDFPRINT_DOCKER_PATH.$project->audf_potential_targets, PerformMediaTask::AUDFPRINT_DOCKER_PATH.'afpt_cache/'.$afpt_file];
         $this->runDocker($cmd);
         $media->is_potential_target = true;
         $media->save();
     }
 
-    private function addDistractorsItem($media_file) {
+    private function addDistractorsItem($afpt_file) {
         $media = $this->task->media;
         $project = $media->project;
 
@@ -439,13 +477,13 @@ class PerformMediaTask extends Job implements SelfHandling, ShouldQueue
             $project->save();
         }
 
-        $cmd = [$audf_command, '-d', PerformMediaTask::AUDFPRINT_DOCKER_PATH.$project->audf_distractors, PerformMediaTask::AUDFPRINT_DOCKER_PATH.$media_file];
+        $cmd = [$audf_command, '-d', PerformMediaTask::AUDFPRINT_DOCKER_PATH.$project->audf_distractors, PerformMediaTask::AUDFPRINT_DOCKER_PATH.'afpt_cache/'.$afpt_file];
         $this->runDocker($cmd);
         $media->is_distractor = true;
         $media->save();
     }
 
-    private function addTargetsItem($media_file) {
+    private function addTargetsItem($afpt_file) {
         $media = $this->task->media;
         $project = $media->project;
 
@@ -462,7 +500,7 @@ class PerformMediaTask extends Job implements SelfHandling, ShouldQueue
             $project->save();
         }
 
-        $cmd = [$audf_command, '-d', PerformMediaTask::AUDFPRINT_DOCKER_PATH.$project->audf_targets, PerformMediaTask::AUDFPRINT_DOCKER_PATH.$media_file];
+        $cmd = [$audf_command, '-d', PerformMediaTask::AUDFPRINT_DOCKER_PATH.$project->audf_targets, PerformMediaTask::AUDFPRINT_DOCKER_PATH.'afpt_cache/'.$afpt_file];
         $this->runDocker($cmd);
         $media->is_target = true;
         $media->save();

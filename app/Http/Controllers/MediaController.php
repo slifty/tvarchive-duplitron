@@ -58,6 +58,13 @@ class MediaController extends Controller
         {
             $media->media_path = $request->input('media_path');
             $media->afpt_path = '';
+
+            // Make sure this media hasn't already been saved for this project
+            $existing_media = Media::where('media_path', $media->media_path)->where('project_id', $media->project_id)->first();
+            if($existing_media)
+            {
+                return $existing_media;
+            }
         }
 
         // Sometimes the media we want to track is a subset of the full media
@@ -79,8 +86,8 @@ class MediaController extends Controller
      */
     public function show($id)
     {
-        $task = Media::find($id);
-        return $task;
+        $media = Media::find($id);
+        //return $media;
     }
 
     /**
