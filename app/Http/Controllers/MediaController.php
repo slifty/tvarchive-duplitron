@@ -58,21 +58,21 @@ class MediaController extends Controller
         {
             $media->media_path = $request->input('media_path');
             $media->afpt_path = '';
-
-            // Make sure this media hasn't already been saved for this project
-            $existing_media = Media::where('media_path', $media->media_path)->where('project_id', $media->project_id)->first();
-            if($existing_media)
-            {
-                return $existing_media;
-            }
         }
 
         // Sometimes the media we want to track is a subset of the full media
-        if($request->has('start'))
-        {
-            $media->start = $request->input('start');
-            $media->duration = $request->input('duration');
-        }
+        $media->start = $request->has('start')?$request->start:0;
+        $media->duration = $request->has('duration')?$request->duration:MEDIA::DURATION_UNKNOWN;
+
+        // Make sure this media hasn't already been saved for this project
+        $existing_media = Media::where('media_path', $media->media_path)
+            ->where('project_id', $media->project_id)
+            ->where('start', $media->start)
+            ->where('duration', $media->duration)
+            ->first();
+
+        if($existing_media)
+            return $existing_media;
 
         $media->save();
         return $media;
@@ -87,7 +87,7 @@ class MediaController extends Controller
     public function show($id)
     {
         $media = Media::find($id);
-        //return $media;
+        return $media;
     }
 
     /**
