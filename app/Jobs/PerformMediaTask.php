@@ -47,6 +47,10 @@ class PerformMediaTask extends Job implements SelfHandling, ShouldQueue
         // Load the media file locally
         $afpt_file = $this->prepareMedia($this->task->media);
 
+        // Mark this as processing
+        $this->task->status_code = Task::STATUS_PROCESSING;
+        $this->task->save();
+
         // Run the Docker commands based on the task type
         switch($this->task->type)
         {
@@ -71,6 +75,10 @@ class PerformMediaTask extends Job implements SelfHandling, ShouldQueue
                 $this->addTargetsItem($afpt_file);
                 break;
         }
+
+        // Mark this as finished
+        $this->task->status_code = Task::STATUS_FINISHED;
+        $this->task->save();
 
     }
 
@@ -99,7 +107,7 @@ class PerformMediaTask extends Job implements SelfHandling, ShouldQueue
 
         // Do we have a copy of this media cached?
         if(file_exists($temp_media_path))
-            return $temp_media_path;
+            return $temp_media_file;
 
         // Run an rsync to get a local copy
         // NOTE: This feels dirty, but so it goes.
@@ -162,18 +170,12 @@ class PerformMediaTask extends Job implements SelfHandling, ShouldQueue
         $manager = $docker->getContainerManager();
         $manager->create($container);
 
-        $this->task->status_code = Task::STATUS_PROCESSING;
-        $this->task->save();
-
         // Gather the logs and return them to the caller
         $logs = [];
         $manager->run($container, function($output, $type) use (&$logs) {
             // TODO: Process output more intelligently...
             $logs = array_merge($logs,explode("\n", $output));
         });
-
-        $this->task->status_code = Task::STATUS_FINISHED;
-        $this->task->save();
 
         return $logs;
     }
@@ -418,6 +420,10 @@ class PerformMediaTask extends Job implements SelfHandling, ShouldQueue
         $media = $this->task->media;
         $project = $media->project;
 
+        // Make sure this media hasn't already been added
+        if($media->is_corpus)
+            return;
+
         if($project->has_corpus())
         {
             // Add to an existing corpus
@@ -440,6 +446,10 @@ class PerformMediaTask extends Job implements SelfHandling, ShouldQueue
     private function addPotentialTargetsItem($afpt_file) {
         $media = $this->task->media;
         $project = $media->project;
+
+        // Make sure this media hasn't already been added
+        if($media->is_potential_target)
+            return;
 
         if($project->has_potential_targets())
         {
@@ -464,6 +474,10 @@ class PerformMediaTask extends Job implements SelfHandling, ShouldQueue
         $media = $this->task->media;
         $project = $media->project;
 
+        // Make sure this media hasn't already been added
+        if($media->is_distractor)
+            return;
+
         if($project->has_distractors())
         {
             // Add to an existing corpus
@@ -486,6 +500,10 @@ class PerformMediaTask extends Job implements SelfHandling, ShouldQueue
     private function addTargetsItem($afpt_file) {
         $media = $this->task->media;
         $project = $media->project;
+
+        // Make sure this media hasn't already been added
+        if($media->is_target)
+            return;
 
         if($project->has_targets())
         {

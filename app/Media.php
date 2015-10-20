@@ -11,6 +11,8 @@ class Media extends Model
     // - created_at
     // - updated_at
 
+    const DURATION_UNKNOWN = -1;
+
     /**
      * The database table used by the model.
      *
