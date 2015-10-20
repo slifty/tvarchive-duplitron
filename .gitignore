@@ -7,8 +7,13 @@ Homestead.json
 /certs/*
 *.pem
 
-/storage/media/*
 /storage/audfprint/*
+!/storage/audfprint/afpt_cache
+/storage/audfprint/afpt_cache/*
+!/storage/audfprint/media_cache
+/storage/audfprint/media_cache/*
+!/storage/audfprint/pklz_cache
+/storage/audfprint/pklz_cache/*
 !*.gitkeep
 
 *.DS_Store
