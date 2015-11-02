@@ -16,9 +16,38 @@ class MediaController extends Controller
      *
      * @return Response
      */
-    public function index()
+    public function index(Request $request)
     {
-        //
+        // Project ID is required
+        if($request->has('project_id'))
+        {
+            $results = Media::where('project_id', $request->input('project_id'));
+        }
+        else
+        {
+            // TODO: Real errors.
+            return ['ERR: Project ID Required'];
+        }
+
+        if($request->has('matchType'))
+        {
+            switch($request->input('matchType'))
+            {
+                case 'corpus':
+                    $results = $results->where('is_corpus', 1);
+                    break;
+                case 'distractor':
+                    $results = $results->where('is_distractor', 1);
+                    break;
+                case 'potential_target':
+                    $results = $results->where('is_potential_target', 1);
+                    break;
+                case 'target':
+                    $results = $results->where('is_target', 1);
+                    break;
+            }
+        }
+        return $results->get();
     }
 
     /**
