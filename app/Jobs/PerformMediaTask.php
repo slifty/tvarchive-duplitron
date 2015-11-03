@@ -125,16 +125,15 @@ class PerformMediaTask extends Job implements SelfHandling, ShouldQueue
                 break;
             case 'http':
             case 'https':
+
                 // If this is the archive, use their credentials
+                // TODO: this should be made somehow more elegant or generalized
                 if($media_host == "archive.org")
                 {
-                    // This was copied from petabox Util.inc
-                    $user = str_replace('@','%40',env("ARCHIVE_USER"));
+                    $user = env("ARCHIVE_USER");
                     $sig = env("ARCHIVE_SIG");
-                    // $sig = str_replace('+','%2B',$sig);
-                    // $sig = preg_replace('/^([^ ]+) ([^ ]+) /','$1+$2+',$sig);
-                    // $sig = str_replace('/','%2F',$sig);
-                    // $sig = str_replace('=','%3D',$sig);
+
+                    // Set the cookie and load the file
                     $opts = array(
                         'http'=>array(
                             'header'=>"Cookie: logged-in-user=".$user.";logged-in-sig=".$sig
@@ -443,6 +442,15 @@ class PerformMediaTask extends Job implements SelfHandling, ShouldQueue
                     "target_start" => floatval($match_data[4]),
                     "destination_media" => $destination_media
                 ];
+
+                // We don't want matches to the same media file
+                if($destination_media->id == $this->task->media->id
+                || $destination_media->base_media_id == $this->task->media->id)
+                    continue;
+
+                // We don't want matches that are too short
+                if($match['duration'] < 2)
+                    continue;
 
                 array_push($matches, $match);
             }

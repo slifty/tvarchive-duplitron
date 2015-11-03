@@ -81,18 +81,20 @@ class MediaController extends Controller
             $base_media = Media::find($request->input('base_media_id'));
             $media->media_path = $base_media->media_path;
             $media->afpt_path = $base_media->afpt_path;
+            $media->external_id = $base_media->external_id;
         }
         else
         {
             $media->media_path = $request->input('media_path');
             $media->afpt_path = '';
+
+            // Store the external ID if it exists
+            if($request->has('external_id'))
+            {
+                $media->external_id = $request->input('external_id');
+            }
         }
 
-        // Store the external ID if it exists
-        if($request->has('external_id'))
-        {
-            $media->external_id = $request->input('external_id');
-        }
 
         // Sometimes the media we want to track is a subset of the full media
         $media->start = $request->has('start')?$request->start:0;
