@@ -71,7 +71,6 @@ class MediaController extends Controller
         //
         $media = new Media();
 
-
         $media->project_id = $request->input('project_id');
 
         // Media can be created in two ways:
@@ -89,19 +88,37 @@ class MediaController extends Controller
             $media->afpt_path = '';
         }
 
+        // Store the external ID if it exists
+        if($request->has('external_id'))
+        {
+            $media->external_id = $request->input('external_id');
+        }
+
         // Sometimes the media we want to track is a subset of the full media
         $media->start = $request->has('start')?$request->start:0;
         $media->duration = $request->has('duration')?$request->duration:MEDIA::DURATION_UNKNOWN;
 
         // Make sure this media hasn't already been saved for this project
-        $existing_media = Media::where('media_path', $media->media_path)
-            ->where('project_id', $media->project_id)
+        $query = Media::where('project_id', $media->project_id)
             ->where('start', $media->start)
-            ->where('duration', $media->duration)
-            ->first();
+            ->where('duration', $media->duration);
 
+        if($media->external_id)
+        {
+            // If an external ID is set, use that as the differentiating factor
+            $query = $query->where('external_id', $media->external_id);
+        }
+        else
+        {
+            // Otherwise, use the media path
+            $query = $query->where('media_path', $media->media_path);
+        }
+
+        $existing_media = $query->first();
         if($existing_media)
+        {
             return $existing_media;
+        }
 
         $media->save();
         return $media;

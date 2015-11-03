@@ -95,12 +95,15 @@ class PerformMediaTask extends Job implements SelfHandling, ShouldQueue
 
         // Make a name for the temporary media file
         $parsed_url = parse_url($path);
+        $media_scheme = $parsed_url['scheme'];
+
+
         $media_host = $parsed_url['host'];
-        $media_user = $parsed_url['user'];
+        $media_user = (array_key_exists('user', $parsed_url))?$parsed_url['user']:"";
         $media_path = $parsed_url['path'];
 
         $parsed_path = pathinfo($media_path);
-        $file_type = $parsed_path['extension'];
+        $file_type = (array_key_exists('user', $parsed_path))?$parsed_path['extension']:"mp3";
 
         $temp_media_file = "media-".$this->task->media->id.".".$file_type;
         $temp_media_path = env('FPRINT_STORE').'media_cache/'.$temp_media_file;
@@ -109,12 +112,43 @@ class PerformMediaTask extends Job implements SelfHandling, ShouldQueue
         if(file_exists($temp_media_path))
             return $temp_media_file;
 
-        // Run an rsync to get a local copy
-        // NOTE: This feels dirty, but so it goes.
-        // TODO: support HTTP, not just rsync
-        $ssh_command = 'ssh -i '.env('RSYNC_IDENTITY_FILE');
-        shell_exec('/usr/bin/rsync -az -e \''.$ssh_command.'\' '.$media_user.'@'.$media_host.':'.$media_path.' '.$temp_media_path);
 
+        // Check the scheme
+
+        switch($media_scheme)
+        {
+            case 'ssh':
+                // Run an rsync to get a local copy
+                // NOTE: This feels dirty, but so it goes.
+                $ssh_command = 'ssh -i '.env('RSYNC_IDENTITY_FILE');
+                shell_exec('/usr/bin/rsync -az -e \''.$ssh_command.'\' '.$media_user.'@'.$media_host.':'.$media_path.' '.$temp_media_path);
+                break;
+            case 'http':
+            case 'https':
+                // If this is the archive, use their credentials
+                if($media_host == "archive.org")
+                {
+                    // This was copied from petabox Util.inc
+                    $user = str_replace('@','%40',env("ARCHIVE_USER"));
+                    $sig = env("ARCHIVE_SIG");
+                    // $sig = str_replace('+','%2B',$sig);
+                    // $sig = preg_replace('/^([^ ]+) ([^ ]+) /','$1+$2+',$sig);
+                    // $sig = str_replace('/','%2F',$sig);
+                    // $sig = str_replace('=','%3D',$sig);
+                    $opts = array(
+                        'http'=>array(
+                            'header'=>"Cookie: logged-in-user=".$user.";logged-in-sig=".$sig
+                        )
+                    );
+                    $context = stream_context_create($opts);
+                    copy($path, $temp_media_path, $context);
+                }
+                else
+                {
+                    copy($path, $temp_media_path);
+                }
+                break;
+        }
         // If the media has a listed start / duration, slice it down
         if($media->duration > 0)
         {
