@@ -142,6 +142,8 @@ return [
         Duplitron\Providers\AppServiceProvider::class,
         Duplitron\Providers\EventServiceProvider::class,
         Duplitron\Providers\RouteServiceProvider::class,
+        Duplitron\Providers\LoaderServiceProvider::class,
+        Duplitron\Providers\FingerprinterServiceProvider::class,
 
     ],
 

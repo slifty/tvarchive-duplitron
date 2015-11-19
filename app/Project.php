@@ -39,18 +39,4 @@ class Project extends Model
         return $this->hasMany('Duplitron\Media');
     }
 
-    // Audfprint can't create databases until there is something in it, so we need to know if each database has been set up yet
-    // TODO: modify Audfprint to allow empty databases to avoid this.
-    public function has_corpus() {
-        return $this->audf_corpus != null && file_exists(env('FPRINT_STORE').$this->audf_corpus);
-    }
-    public function has_potential_targets() {
-        return $this->audf_potential_targets != null && file_exists(env('FPRINT_STORE').$this->audf_potential_targets);
-    }
-    public function has_targets() {
-        return $this->audf_targets   != null && file_exists(env('FPRINT_STORE').$this->audf_targets);
-    }
-    public function has_distractors() {
-        return $this->audf_distractors != null && file_exists(env('FPRINT_STORE').$this->audf_distractors);
-    }
 }

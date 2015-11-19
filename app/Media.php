@@ -25,14 +25,31 @@ class Media extends Model
      *
      * @var array
      */
-    protected $fillable = ['media_path', 'afpt_path', 'external_id', 'start', 'duration'];
+    protected $fillable = [
+        'media_path',
+        'afpt_path',
+        'external_id',
+        'start',
+        'duration'
+    ];
 
     /**
      * The attributes excluded from the model's JSON form.
      *
      * @var array
      */
-    protected $hidden = ['is_potential_target', 'is_corpus', 'is_distractor', 'is_target'];
+    protected $hidden = [
+        'is_potential_target',
+        'is_corpus',
+        'is_distractor',
+        'is_target',
+        'potential_target_database',
+        'corpus_database',
+        'distractor_database',
+        'target_database'
+    ];
+
+
 
     /**
      * The accessors to append to the model's array form.
