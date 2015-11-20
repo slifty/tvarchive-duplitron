@@ -197,8 +197,8 @@ class AudfDockerFingerprinter implements FingerprinterContract
         $project = $media->project;
 
         // Make sure this media hasn't already been added
-        // if($media->is_corpus)
-        //     return;
+        if($media->is_corpus)
+            return;
 
         $database_path = $this->getCurrentDatabase(AudfDockerFingerprinter::MATCH_CORPUS, $project);
         if($this->getDatabaseStatus($database_path) == AudfDockerFingerprinter::DATABASE_STATUS_MISSING)
@@ -210,6 +210,7 @@ class AudfDockerFingerprinter implements FingerprinterContract
         $logs = $this->runDocker($cmd);
 
         $media->is_corpus = true;
+        $media->corpus_database = $database_path;
         $media->save();
 
         // Did we fill the database?
@@ -248,6 +249,7 @@ class AudfDockerFingerprinter implements FingerprinterContract
         $logs = $this->runDocker($cmd);
 
         $media->is_distractor = true;
+        $media->distractor_database = $database_path;
         $media->save();
 
         // Did we fill the database?
@@ -277,6 +279,7 @@ class AudfDockerFingerprinter implements FingerprinterContract
             return;
 
         $database_path = $this->getCurrentDatabase(AudfDockerFingerprinter::MATCH_POTENTIAL_TARGET, $project);
+
         if($this->getDatabaseStatus($database_path) == AudfDockerFingerprinter::DATABASE_STATUS_MISSING)
             $audf_command = 'new';
         else
@@ -286,6 +289,7 @@ class AudfDockerFingerprinter implements FingerprinterContract
         $logs = $this->runDocker($cmd);
 
         $media->is_potential_target = true;
+        $media->potential_target_database = $database_path;
         $media->save();
 
         // Did we fill the database?
@@ -324,6 +328,7 @@ class AudfDockerFingerprinter implements FingerprinterContract
         $cmd = [$audf_command, '-d', AudfDockerFingerprinter::AUDFPRINT_DOCKER_PATH.$database_path, AudfDockerFingerprinter::AUDFPRINT_DOCKER_PATH.'afpt_cache/'.$afpt_file];
         $logs = $this->runDocker($cmd);
         $media->is_target = true;
+        $media->target_database = $database_path;
         $media->save();
 
         // Did we fill the database?
@@ -332,6 +337,45 @@ class AudfDockerFingerprinter implements FingerprinterContract
         {
             $this->retireDatabase($database_path);
         }
+
+        return array(
+            'results' => true,
+            'output' => $logs
+        );
+
+    }
+
+
+    /**
+     * See contract for documentation
+     */
+    public function removePotentialTargetsItem($media)
+    {
+        $afpt_file = $this->prepareMedia($media);
+        $project = $media->project;
+
+        // Make sure this media hasn't already been added
+        if(!$media->is_potential_target)
+            $logs = array("This file isn't a potential target");
+        else
+        {
+            $database_path = $this->resolveDatabasePath($media->potential_target_database);
+
+            // Does the database still exist?
+            if($this->getDatabaseStatus($database_path) == AudfDockerFingerprinter::DATABASE_STATUS_MISSING)
+                $logs = array("The database this was stored in no longer existed, so you're good");
+            else
+            {
+                $audf_command = 'remove';
+                $cmd = [$audf_command, '-d', AudfDockerFingerprinter::AUDFPRINT_DOCKER_PATH.$database_path, AudfDockerFingerprinter::AUDFPRINT_DOCKER_PATH.'afpt_cache/'.$afpt_file];
+                $logs = $this->runDocker($cmd);
+            }
+        }
+
+        // Update the media file
+        $media->is_potential_target = false;
+        $media->potential_target_database = "";
+        $media->save();
 
         return array(
             'results' => true,
@@ -393,16 +437,16 @@ class AudfDockerFingerprinter implements FingerprinterContract
                 $base = 'project_'.$project->id.'-'.$match_type;
                 break;
         }
-
         // If the current database recent and considered good, use it
         if(strpos($current_database, $base) === false)
             $bin_number = 0;
-        elseif($this->getDatabaseStatus($current_database) == AudfDockerFingerprinter::DATABASE_STATUS_GOOD)
+        elseif($this->getDatabaseStatus($cache_path.'/'.$current_database) == AudfDockerFingerprinter::DATABASE_STATUS_GOOD)
             return $cache_path."/".$current_database;
         else
         {
             // The current database is recent but filled, increment the bin number accordingly
             preg_match('/.*\-(\d+)(\-full)\.pklz/', $current_database, $matches);
+
             if(sizeof($matches) == 0)
                 $bin_number = 0;
             else
@@ -461,6 +505,26 @@ class AudfDockerFingerprinter implements FingerprinterContract
         // Looks good to me!
         return AudfDockerFingerprinter::DATABASE_STATUS_GOOD;
     }
+
+    /**
+     * Since we are storing status in the file path we may need to update a DB path
+     * TODO: eventually status should be handled in... a database...
+     * @param  [type] $relative_database_path [description]
+     * @return [type]                         [description]
+     */
+    private function resolveDatabasePath($relative_database_path) {
+        if(is_file(env('FPRINT_STORE').$relative_database_path))
+            return $relative_database_path;
+
+        // Try adding full to see if that exists
+        $new_path = str_replace('.pklz', '-full.pklz', $relative_database_path);
+        if(is_file(env('FPRINT_STORE').$new_path))
+            return $new_path;
+
+        return $relative_database_path;
+    }
+
+
 
     /**
      * Given a database, mark it as full

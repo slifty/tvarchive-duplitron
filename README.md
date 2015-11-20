@@ -23,3 +23,6 @@ To run this code you need:
 
 ## Installing
 
+(for now I'll just throw various commands in no particular order for reference, lulz.  Eventually this will be turned into real instructions)
+
+- docker pull slifty/audfprint

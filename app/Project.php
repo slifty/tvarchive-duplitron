@@ -30,7 +30,7 @@ class Project extends Model
      *
      * @var array
      */
-    protected $hidden = ['audf_corpus', 'audf_potential_targets', 'audf_targets', 'audf_distractors'];
+    protected $hidden = [];
 
     /**
      * Specify relationship with media

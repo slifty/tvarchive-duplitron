@@ -66,7 +66,7 @@ interface FingerprinterContract
      * @param  object $media the media object being matched against the various corpuses
      * @return object        the result object, containing output logs and data
      */
-    //public function removePotentialTargetsItem($media);
+    public function removePotentialTargetsItem($media);
 
 
     /**

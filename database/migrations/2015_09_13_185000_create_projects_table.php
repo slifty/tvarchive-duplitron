@@ -17,10 +17,6 @@ class CreateProjectsTable extends Migration
             // Create fields
             $table->increments('id');
             $table->text('name');
-            $table->text('audf_corpus')->nullable();
-            $table->text('audf_potential_targets')->nullable();
-            $table->text('audf_matches')->nullable();
-            $table->text('audf_distractors')->nullable();
             $table->timestamps();
 
             // Create indexes

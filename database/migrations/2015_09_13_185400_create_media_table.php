@@ -27,6 +27,10 @@ class CreateMediaTable extends Migration
             $table->boolean('is_corpus')->default(false);
             $table->boolean('is_distractor')->default(false);
             $table->boolean('is_target')->default(false);
+            $table->text('potential_target_database')->nullable();
+            $table->text('corpus_database')->nullable();
+            $table->text('distractor_database')->nullable();
+            $table->text('target_database')->nullable();
             $table->timestamps();
 
             // Create indexes
