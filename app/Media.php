@@ -49,8 +49,6 @@ class Media extends Model
         'target_database'
     ];
 
-
-
     /**
      * The accessors to append to the model's array form.
      *

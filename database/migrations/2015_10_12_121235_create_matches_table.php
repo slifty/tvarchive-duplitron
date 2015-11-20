@@ -20,13 +20,15 @@ class CreateMatchesTable extends Migration
             $table->decimal('duration');
             $table->decimal('destination_start');
             $table->decimal('source_start');
-            $table->longText('payload');
+            $table->timestamps();
 
             // Create indexes
             $table->foreign('destination_id')->references('id')->on('media')
                 ->onDelete('cascade');
             $table->foreign('source_id')->references('id')->on('media')
                 ->onDelete('cascade');
+
+            $table->unique(array('destination_id', 'source_id', 'destination_start', 'source_start'));
         });
     }
 

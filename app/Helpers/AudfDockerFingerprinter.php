@@ -6,6 +6,7 @@ use Duplitron\Helpers\Contracts\FingerprinterContract;
 use Duplitron\Helpers\Contracts\LoaderContract;
 
 use Duplitron\Media;
+use Duplitron\Match;
 
 class AudfDockerFingerprinter implements FingerprinterContract
 {
@@ -96,6 +97,41 @@ class AudfDockerFingerprinter implements FingerprinterContract
 
         // Create a master list of matches
         $matches = array_merge($corpus_results, $potential_targets_results, $distractors_results, $targets_results);
+
+        // Save any previously unsaved matches
+        foreach($matches as $match)
+        {
+            // To prevent mirror duplicates, stored matches always put the higher ID media as the destination
+            if($match['destination_media']->id > $media->id)
+            {
+                $destination_id = $match['destination_media']->id;
+                $destination_start = $match['target_start'];
+                $source_id = $media->id;
+                $source_start = $match['start'];
+            }
+            else
+            {
+                $source_id = $match['destination_media']->id;
+                $source_start = $match['target_start'];
+                $destination_id = $media->id;
+                $destination_start = $match['start'];
+            }
+
+            $match_object = new Match();
+            $match_object->duration = $match['duration'];
+            $match_object->destination_id = $destination_id;
+            $match_object->destination_start = $destination_start;
+            $match_object->source_id = $source_id;
+            $match_object->source_start = $source_start;
+            try
+            {
+                $match_object->save();
+            }
+            catch(Exception $e)
+            {
+                // TODO: check to be sure the exception is a dupe key (which is OK)
+            }
+        }
 
         // Sort all matches list by start time
         $start_sort = function($a, $b)

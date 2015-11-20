@@ -171,4 +171,14 @@ class MediaController extends Controller
     {
         //
     }
+
+
+    public function getMediaMatches($id)
+    {
+        $media = Media::find($id);
+        if(!$media)
+            return [];
+
+        return $media->destinationMatches()->get();
+    }
 }

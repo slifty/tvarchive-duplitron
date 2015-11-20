@@ -26,6 +26,13 @@ class Match extends Model
     protected $fillable = ['duration', 'destination_start', 'source_start'];
 
     /**
+     * The accessors to append to the model's array form.
+     *
+     * @var array
+     */
+    protected $with = ['source', 'destination'];
+
+    /**
      * Specify relationship with Media (Target)
      * The destination is the file that has been matched against (from one of the audfprint databases).
      */
@@ -40,5 +47,7 @@ class Match extends Model
     public function source() {
         return $this->belongsTo('Duplitron\Media', 'source_id');
     }
+
+
 
 }

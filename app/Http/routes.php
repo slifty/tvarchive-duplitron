@@ -37,7 +37,7 @@ Route::get('/', function () {
 
 
 
-    return "What you have just witnessed is a test of Docker integration";
+    return "What you have just witnessed is a test of Docker integration... or HAVE YOU!!??!?! (you haven't, I deleted that code.)";
 });
 
 
@@ -51,6 +51,8 @@ Route::resource('/api/projects', 'ProjectController');
  * REST for Media Model
  */
 Route::resource('/api/media', 'MediaController');
+
+Route::get('/api/media/{id}/matches', 'MediaController@getMediaMatches');
 
 /**
  * REST for Task Model
