@@ -12,12 +12,16 @@ class BasicLoader implements LoaderContract
      */
     public function loadMedia($media)
     {
+        // Set up the basics
+        $return_files = array(
+            'full' => '',
+            'chunks' => array()
+        );
         $path = $media->media_path;
 
-        // Make a name for the temporary media file
+        // Extract relevant pieces of the specified media path
         $parsed_url = parse_url($path);
         $media_scheme = $parsed_url['scheme'];
-
 
         $media_host = $parsed_url['host'];
         $media_user = (array_key_exists('user', $parsed_url))?$parsed_url['user']:"";
@@ -26,15 +30,30 @@ class BasicLoader implements LoaderContract
         $parsed_path = pathinfo($media_path);
         $file_type = (array_key_exists('user', $parsed_path))?$parsed_path['extension']:"mp3";
 
-        $temp_media_file = "media-".$media->id.".".$file_type;
-        $temp_media_path = env('FPRINT_STORE').'media_cache/'.$temp_media_file;
+        // Set up the pieces of the destination file names
+        $temp_media_base_file = "media-".$media->id;
+        $temp_media_file = $temp_media_base_file.".".$file_type;
+        $temp_media_base_path = env('FPRINT_STORE').'media_cache/';
+        $temp_media_path = $temp_media_base_path.$temp_media_file;
+
+        // Save the media path
+        $return_files['full'] = $temp_media_file;
 
         // Do we have a copy of this media cached?
         if(file_exists($temp_media_path))
-            return $temp_media_file;
+        {
+            // Load the cached chunks as well
+            $chunk_glob_path = $temp_media_base_path.$temp_media_base_file."_*.".$file_type;
+            // Return the cached values
+            $chunk_paths = glob($chunk_glob_path);
 
+            foreach($chunk_paths as $chunk_path)
+                $return_files['chunks'][] = basename($chunk_path);
 
-        // Check the scheme
+            return $return_files;
+        }
+
+        // Load the file (based on the scheme)
         switch($media_scheme)
         {
             case 'ssh':
@@ -68,19 +87,19 @@ class BasicLoader implements LoaderContract
                 }
                 break;
         }
-        // If the media has a listed start / duration, slice it down
+
+        // Set up PHPVideoToolkit (for use in the next steps)
+        $config = new \PHPVideoToolkit\Config(array(
+            'temp_directory' => '/tmp',
+            'ffmpeg' => env('FFMPEG_BINARY_PATH'),
+            'ffprobe' => env('FFPROBE_BINARY_PATH'),
+            'yamdi' => '',
+            'qtfaststart' => '',
+        ), true);
+
+        // Slice down the media if it has a listed start / duration
         if($media->duration > 0)
         {
-
-            // Specify the configuration for PHPVideoToolkit
-            $config = new \PHPVideoToolkit\Config(array(
-                'temp_directory' => '/tmp',
-                'ffmpeg' => env('FFMPEG_BINARY_PATH'),
-                'ffprobe' => env('FFPROBE_BINARY_PATH'),
-                'yamdi' => '',
-                'qtfaststart' => '',
-            ), true);
-
             // Extract the section we care about
             $start = new \PHPVideoToolkit\Timecode($media->start);
             $end = new \PHPVideoToolkit\Timecode($media->start + $media->duration);
@@ -93,7 +112,36 @@ class BasicLoader implements LoaderContract
             rename($trimmed_media_path, $temp_media_path);
         }
 
-        return $temp_media_file;
+        // Chunk the media file into smaller pieces based on env settings
+
+        // Calculate the number of chunks needed
+        $parser = new \PHPVideoToolkit\MediaParser();
+        $audio_data = $parser->getFileInformation($temp_media_path);
+        $slice_duration = env('FPRINT_CHUNK_LENGTH');
+        $duration = $audio_data['duration']->total_seconds;
+        $slices = floor($duration / $slice_duration);
+
+        // Perform the actual slicing
+        if($duration > env('FPRINT_CHUNK_LENGTH'))
+        {
+            $audio  = new \PHPVideoToolkit\Audio($temp_media_path, null, null, false);
+            $slices = $audio->split(env('FPRINT_CHUNK_LENGTH'));
+            $process = $slices->save($temp_media_base_path.$temp_media_base_file."_%index.".$file_type);
+            $output = $process->getOutput();
+            // Get the filenames
+            foreach($output as $chunk)
+            {
+                $return_files['chunks'][] = basename($chunk->getMediaPath());
+            }
+        }
+        else
+        {
+            $copy_path = str_replace(".".$file_type, "_0.".$file_type, $temp_media_path);
+            copy($temp_media_path, $copy_path);
+            $return_files['chunks'][] = basename($copy_path);
+        }
+
+        return $return_files;
     }
 }
 ?>

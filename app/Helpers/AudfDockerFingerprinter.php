@@ -37,7 +37,8 @@ class AudfDockerFingerprinter implements FingerprinterContract
      */
     public function runMatch($media)
     {
-        $afpt_file = $this->prepareMedia($media);
+        $afpt_files = $this->prepareMedia($media);
+        $afpt_file = $afpt_files['full']; // We use the full file for matching
         $project = $media->project;
 
         $task_logs = [];
@@ -127,7 +128,7 @@ class AudfDockerFingerprinter implements FingerprinterContract
             {
                 $match_object->save();
             }
-            catch(Exception $e)
+            catch(\Exception $e)
             {
                 // TODO: check to be sure the exception is a dupe key (which is OK)
             }
@@ -223,31 +224,31 @@ class AudfDockerFingerprinter implements FingerprinterContract
         );
     }
 
-
     /**
-     * See contract for documentation
+     * Given a media item and match type, add it to the database
+     * @param [type] $media      [description]
+     * @param [type] $match_type [description]
      */
-    public function addCorpusItem($media)
+    private function addDatabaseItem($media, $match_type)
     {
-        $afpt_file = $this->prepareMedia($media);
+        $afpt_files = $this->prepareMedia($media);
         $project = $media->project;
 
-        // Make sure this media hasn't already been added
-        if($media->is_corpus)
-            return;
-
-        $database_path = $this->getCurrentDatabase(AudfDockerFingerprinter::MATCH_CORPUS, $project);
+        $database_path = $this->getCurrentDatabase($match_type, $project);
         if($this->getDatabaseStatus($database_path) == AudfDockerFingerprinter::DATABASE_STATUS_MISSING)
             $audf_command = 'new';
         else
             $audf_command = 'add';
 
-        $cmd = [$audf_command, '-d', AudfDockerFingerprinter::AUDFPRINT_DOCKER_PATH.$database_path, AudfDockerFingerprinter::AUDFPRINT_DOCKER_PATH.'afpt_cache/'.$afpt_file];
-        $logs = $this->runDocker($cmd);
+        // The file may be in parts, add each part individually
+        // TODO: consider adding drop check to individual parts
+        // (for now we will always have all parts added to the same database)
+        foreach($afpt_files['chunks'] as $afpt_file) {
 
-        $media->is_corpus = true;
-        $media->corpus_database = $database_path;
-        $media->save();
+            $cmd = [$audf_command, '-d', AudfDockerFingerprinter::AUDFPRINT_DOCKER_PATH.$database_path, '--maxtime', '524288', AudfDockerFingerprinter::AUDFPRINT_DOCKER_PATH.'afpt_cache/'.$afpt_file];
+            $logs = $this->runDocker($cmd);
+
+        }
 
         // Did we fill the database?
         $drop_count = $this->getDropCount($logs);
@@ -258,8 +259,30 @@ class AudfDockerFingerprinter implements FingerprinterContract
 
         return array(
             'results' => true,
-            'output' => $logs
+            'output' => $logs,
+            'database' => $database_path
         );
+    }
+
+
+    /**
+     * See contract for documentation
+     */
+    public function addCorpusItem($media)
+    {
+        // Make sure this media hasn't already been added
+        if($media->is_corpus)
+            return;
+
+        // Run the database insertion
+        $result = $this->addDatabaseItem($media, AudfDockerFingerprinter::MATCH_CORPUS);
+
+        // Save the result
+        $media->is_corpus = true;
+        $media->corpus_database = $result['database'];
+        $media->save();
+
+        return $result;
     }
 
 
@@ -268,37 +291,19 @@ class AudfDockerFingerprinter implements FingerprinterContract
      */
     public function addDistractorsItem($media)
     {
-        $afpt_file = $this->prepareMedia($media);
-        $project = $media->project;
-
         // Make sure this media hasn't already been added
         if($media->is_distractor)
             return;
 
-        $database_path = $this->getCurrentDatabase(AudfDockerFingerprinter::MATCH_DISTRACTOR, $project);
-        if($this->getDatabaseStatus($database_path) == AudfDockerFingerprinter::DATABASE_STATUS_MISSING)
-            $audf_command = 'new';
-        else
-            $audf_command = 'add';
+        // Run the database insertion
+        $result = $this->addDatabaseItem($media, AudfDockerFingerprinter::MATCH_DISTRACTOR);
 
-        $cmd = [$audf_command, '-d', AudfDockerFingerprinter::AUDFPRINT_DOCKER_PATH.$database_path, AudfDockerFingerprinter::AUDFPRINT_DOCKER_PATH.'afpt_cache/'.$afpt_file];
-        $logs = $this->runDocker($cmd);
-
+        // Save the result
         $media->is_distractor = true;
-        $media->distractor_database = $database_path;
+        $media->distractor_database = $result['database'];
         $media->save();
 
-        // Did we fill the database?
-        $drop_count = $this->getDropCount($logs);
-        if($drop_count > 0)
-        {
-            $this->retireDatabase($database_path);
-        }
-
-        return array(
-            'results' => true,
-            'output' => $logs
-        );
+        return $result;
     }
 
 
@@ -307,39 +312,19 @@ class AudfDockerFingerprinter implements FingerprinterContract
      */
     public function addPotentialTargetsItem($media)
     {
-        $afpt_file = $this->prepareMedia($media);
-        $project = $media->project;
-
         // Make sure this media hasn't already been added
         if($media->is_potential_target)
             return;
 
-        $database_path = $this->getCurrentDatabase(AudfDockerFingerprinter::MATCH_POTENTIAL_TARGET, $project);
+        // Run the database insertion
+        $result = $this->addDatabaseItem($media, AudfDockerFingerprinter::MATCH_POTENTIAL_TARGET);
 
-        if($this->getDatabaseStatus($database_path) == AudfDockerFingerprinter::DATABASE_STATUS_MISSING)
-            $audf_command = 'new';
-        else
-            $audf_command = 'add';
-
-        $cmd = [$audf_command, '-d', AudfDockerFingerprinter::AUDFPRINT_DOCKER_PATH.$database_path, AudfDockerFingerprinter::AUDFPRINT_DOCKER_PATH.'afpt_cache/'.$afpt_file];
-        $logs = $this->runDocker($cmd);
-
+        // Save the result
         $media->is_potential_target = true;
-        $media->potential_target_database = $database_path;
+        $media->potential_target_database = $result['database'];
         $media->save();
 
-        // Did we fill the database?
-        $drop_count = $this->getDropCount($logs);
-        if($drop_count > 0)
-        {
-            $this->retireDatabase($database_path);
-        }
-
-        return array(
-            'results' => true,
-            'output' => $logs
-        );
-
+        return $result;
     }
 
 
@@ -348,37 +333,19 @@ class AudfDockerFingerprinter implements FingerprinterContract
      */
     public function addTargetsItem($media)
     {
-        $afpt_file = $this->prepareMedia($media);
-        $project = $media->project;
-
         // Make sure this media hasn't already been added
         if($media->is_target)
             return;
 
-        $database_path = $this->getCurrentDatabase(AudfDockerFingerprinter::MATCH_TARGET, $project);
-        if($this->getDatabaseStatus($database_path) == AudfDockerFingerprinter::DATABASE_STATUS_MISSING)
-            $audf_command = 'new';
-        else
-            $audf_command = 'add';
+        // Run the database insertion
+        $result = $this->addDatabaseItem($media, AudfDockerFingerprinter::MATCH_TARGET);
 
-        $cmd = [$audf_command, '-d', AudfDockerFingerprinter::AUDFPRINT_DOCKER_PATH.$database_path, AudfDockerFingerprinter::AUDFPRINT_DOCKER_PATH.'afpt_cache/'.$afpt_file];
-        $logs = $this->runDocker($cmd);
+        // Save the result
         $media->is_target = true;
-        $media->target_database = $database_path;
+        $media->target_database = $result['database'];
         $media->save();
 
-        // Did we fill the database?
-        $drop_count = $this->getDropCount($logs);
-        if($drop_count > 0)
-        {
-            $this->retireDatabase($database_path);
-        }
-
-        return array(
-            'results' => true,
-            'output' => $logs
-        );
-
+        return $result;
     }
 
 
@@ -387,25 +354,14 @@ class AudfDockerFingerprinter implements FingerprinterContract
      */
     public function removePotentialTargetsItem($media)
     {
-        $afpt_file = $this->prepareMedia($media);
-        $project = $media->project;
-
-        // Make sure this media hasn't already been added
+        // Make sure this media is actually a target
         if(!$media->is_potential_target)
             $logs = array("This file isn't a potential target");
         else
         {
+            // Resolve the path (in case it is filed)
             $database_path = $this->resolveDatabasePath($media->potential_target_database);
-
-            // Does the database still exist?
-            if($this->getDatabaseStatus($database_path) == AudfDockerFingerprinter::DATABASE_STATUS_MISSING)
-                $logs = array("The database this was stored in no longer existed, so you're good");
-            else
-            {
-                $audf_command = 'remove';
-                $cmd = [$audf_command, '-d', AudfDockerFingerprinter::AUDFPRINT_DOCKER_PATH.$database_path, AudfDockerFingerprinter::AUDFPRINT_DOCKER_PATH.'afpt_cache/'.$afpt_file];
-                $logs = $this->runDocker($cmd);
-            }
+            $logs = $this->removeDatabaseItem($media, $database_path);
         }
 
         // Update the media file
@@ -417,7 +373,35 @@ class AudfDockerFingerprinter implements FingerprinterContract
             'results' => true,
             'output' => $logs
         );
+    }
 
+
+    /**
+     * Given a media object and a match type, remove the media object from the relevant database
+     * @param  [type] $media     [description]
+     * @param  [type] $matchType [description]
+     * @return [type]            [description]
+     */
+    private function removeDatabaseItem($media, $database_path)
+    {
+        // Get the fingerprints
+        $afpt_files = $this->prepareMedia($media);
+
+        // Does the database still exist?
+        if($this->getDatabaseStatus($database_path) == AudfDockerFingerprinter::DATABASE_STATUS_MISSING)
+            $logs = array("The database this was stored in no longer existed.");
+        else
+        {
+
+            // Delete each chunk
+            foreach($afpt_files['chunks'] as $afpt_file)
+            {
+                $audf_command = 'remove';
+                $cmd = [$audf_command, '-d', AudfDockerFingerprinter::AUDFPRINT_DOCKER_PATH.$database_path, AudfDockerFingerprinter::AUDFPRINT_DOCKER_PATH.'afpt_cache/'.$afpt_file];
+                $logs = $this->runDocker($cmd);
+            }
+        }
+        return $logs;
     }
 
 
@@ -583,7 +567,8 @@ class AudfDockerFingerprinter implements FingerprinterContract
      */
     private function multiMatch($media, $databases)
     {
-        $afpt_file = $this->prepareMedia($media);
+        $afpt_files = $this->prepareMedia($media);
+        $afpt_file = $afpt_files['full'];
         $results = array();
         $logs = array();
 
@@ -609,42 +594,73 @@ class AudfDockerFingerprinter implements FingerprinterContract
     }
 
 
-
     /**
      * Takes in a media file and ensures that has been properly loaded and preprocessed
      * @param  object $media the media object we're going to be working with
-     * @return boolean       whether or not the media is ready for action loaded
+     * @return array         a list of fingerprint file names related to this media
      */
     private function prepareMedia($media)
     {
-        // Nail down the name of the fingerprint file
-        // TODO: fprint_file should probably be stored in the DB.  Right now we're relying on the filename matching a pattern from the loadMedia() step.  Bad form.
-        $fprint_file = 'media-'.$media->id.'.afpt';
-        $fprint_path = env('FPRINT_STORE').'afpt_cache/'.$fprint_file;
-
-        // Do we have a fingerprint cached?
-        if(file_exists($fprint_path))
-            return $fprint_file;
-
-        // Are we using a subset of the media / do we need to generate our own fprint?
-        // TODO: for now we will ALWAYS generate an fprint if we don't have a cached one.  In future we will want to see if the fingerprint path is set and attempt to load it.
-
         // Load the media
-        $media_file = $this->loader->loadMedia($media);
+        $media_files = $this->loader->loadMedia($media);
+        $media_path_base = env('FPRINT_STORE').'media_cache/';
+        $fprint_path_base = env('FPRINT_STORE').'afpt_cache/';
 
-        // Precompute the media
+        $fprint_files = array(
+            'full' => '',
+            'chunks' => array()
+        );
+
+        // Figure out what fingerprints we're missing
+        $needed_fingerprints = array();
+        $parsed_path = pathinfo($media_files['full']);
+
+        // Check out the full file first
+        $full_afpt_file = $parsed_path['filename'].'.afpt';
+        if(!is_file($fprint_path_base.$full_afpt_file))
+            $fprint_files['full'] = $this->createFingerprint($media_files['full']);
+        else
+            $fprint_files['full'] = $full_afpt_file;
+
+        // Now try each chunk
+        foreach($media_files['chunks'] as $chunk_file)
+        {
+            $parsed_path = pathinfo($chunk_file);
+            $chunk_afpt_file = $parsed_path['filename'].'.afpt';
+            if(!is_file($fprint_path_base.$chunk_afpt_file))
+                $fprint_files['chunks'][] = $this->createFingerprint($chunk_file);
+            else
+                $fprint_files['chunks'][] = $chunk_afpt_file;
+        }
+
+        // Move the precompute file
+        return $fprint_files;
+    }
+
+
+    /**
+     * Takes in a media file and creates a fingerprint
+     * @param  string $media_file the filename, not the pathname, of a media file in the media cache
+     * @return array              the ['logs'] and resulting fingerprint ['file']
+     */
+    private function createFingerprint($media_file) {
+
         $cmd = ['precompute', AudfDockerFingerprinter::AUDFPRINT_DOCKER_PATH.'media_cache/'.$media_file];
         $logs = $this->runDocker($cmd);
 
-        // Move the precompute file
-        $media_path = env('FPRINT_STORE').'media_cache/'.$fprint_file;
-
-        if(is_file($media_path))
-            rename($media_path, $fprint_path);
+        $parsed_path = pathinfo($media_file);
+        $fprint_file = $parsed_path['filename'].".afpt";
+        $fprint_start_path = env('FPRINT_STORE').'media_cache/'.$fprint_file;
+        $fprint_end_path = env('FPRINT_STORE').'afpt_cache/'.$fprint_file;
+        if(is_file($fprint_start_path))
+        {
+            rename($fprint_start_path, $fprint_end_path);
+            return $fprint_file;
+        }
         else
-            throw new \Exception('Could not create a fingerprint.');
+            throw new \Exception('Could not create a fingerprint: '.$fprint_file);
 
-        return $fprint_file;
+        return '';
     }
 
 
@@ -705,18 +721,22 @@ class AudfDockerFingerprinter implements FingerprinterContract
                 // target_start -> where in the MATCHED file the match starts
 
                 // The file name has a distinct pattern that contains the media ID in the system
-                $file_pattern = '/.*media\-(\d*)\..*/';
+                $file_pattern = '/.*media\-(\d*)\_(\d*)\..*/';
                 preg_match($file_pattern, $match_data[5], $file_data);
-
                 $destination_media = Media::find($file_data[1]);
 
+                // Remove chunk information from matched file
+                $matched_file = str_replace('_'.$file_data[2], '', $match_data[5]);
+
                 $match = [
-                    "matched_file" => $match_data[5],
+                    "matched_file" => $matched_file,
                     "duration" => floatval($match_data[1]),
                     "start" => floatval($match_data[2]),
-                    "target_start" => floatval($match_data[4]),
+                    "target_start" => floatval($match_data[4]) + floatval($file_data[2]) * env('FPRINT_CHUNK_LENGTH'),
                     "destination_media" => $destination_media
                 ];
+
+                // Combine matches across chunks
 
                 // We don't want matches that are too short
                 if($match['duration'] < 2)
@@ -760,8 +780,9 @@ class AudfDockerFingerprinter implements FingerprinterContract
         foreach($matches as $match)
         {
             // We don't want matches to this media file
-            if($match['destination_media']->id == $media->id
-            || $match['destination_media']->base_media_id == $media->id)
+            // TODO: consider re-adding prevented matches with base media
+            // || $match['destination_media']->base_media_id == $media->id
+            if($match['destination_media']->id == $media->id)
                 continue;
 
             $new_matches[] = $match;

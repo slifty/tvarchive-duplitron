@@ -79,6 +79,7 @@ class MediaController extends Controller
         if($request->has('base_media_id'))
         {
             $base_media = Media::find($request->input('base_media_id'));
+            $media->base_media_id = $base_media->id;
             $media->media_path = $base_media->media_path;
             $media->afpt_path = $base_media->afpt_path;
             $media->external_id = $base_media->external_id;
