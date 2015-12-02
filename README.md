@@ -25,26 +25,30 @@ To run this code you need:
 ## Installing
 
 1. Install [ffmpeg](https://ffmpeg.org/)
+
 2. Install [Docker](https://www.docker.com/) for running audfprint
+
 3. Make it possible for your web provider to talk to docker.  You can either create a docker group and add your web user to that group (easier), or set up [TLS verification](https://docs.docker.com/engine/articles/https/) for docker (harder).
-3. Install [Composer](https://getcomposer.org/)
-4. Clone the audfprint docker image and make sure it runs
+
+4. Install [Composer](https://getcomposer.org/)
+
+5. Clone the audfprint docker image and make sure it runs
 
 	```shell
 	docker pull slifty/audfprint
 	docker run slifty/audfprint
 	```
 
-5. Clone this repository into a living breathing live php enabled directory mod rewrite should be enabled
+6. Clone this repository into a living breathing live php enabled directory mod rewrite should be enabled
 
-6. Install composer dependencies
+7. Install composer dependencies
 
 	```shell
 		cd /path/to/your/clone/here
 		composer install
 	```
 
-7. Copy .env.example to .env in the root directory, then edit it
+8. Copy .env.example to .env in the root directory, then edit it
 
 	```shell
 		cd /path/to/your/clone/here
@@ -55,10 +59,14 @@ To run this code you need:
 	* RSYNC_IDENTITY_FILE: a path to a private key that web root has 500 access to, with any media files you plan on importing
 	* FPRINT_STORE: a path to the /storage/audfprint director inside of the repository
 	* DOCKER_HOST: the location and port of the docker you set up for audfprint
-	*
 
-8. Install supervisor and [enable the job queue](http://laravel.com/docs/5.1/queues#running-the-queue-listener)
+9. Install supervisor and [enable the job queue](http://laravel.com/docs/5.1/queues#running-the-queue-listener).
 
-(for now I'll just throw various commands in no particular order for reference, lulz.  Eventually this will be turned into real instructions)
+	```shell
+		cp duplitron-worker.conf.example /etc/supervisor/conf.d/duplitron-worker.conf
+		vi /etc/supervisor/conf.d/duplitron-worker.conf
+		sudo supervisorctl reread
+		sudo supervisorctl update
+		sudo supervisorctl start duplitron-worker:*
+	```
 
-- docker pull slifty/audfprint

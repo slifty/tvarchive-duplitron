@@ -118,6 +118,7 @@ class AudfDockerFingerprinter implements FingerprinterContract
                 $destination_start = $match['start'];
             }
 
+            // TODO: convert this to bulk insert, (eloquent doesn't seem to have an elegant way to bulk insert right now.)
             $match_object = new Match();
             $match_object->duration = $match['duration'];
             $match_object->destination_id = $destination_id;
@@ -779,6 +780,10 @@ class AudfDockerFingerprinter implements FingerprinterContract
 
         foreach($matches as $match)
         {
+            // Make sure destination media exists
+            if(!$match['destination_media'])
+                continue;
+
             // We don't want matches to this media file
             // TODO: consider re-adding prevented matches with base media
             // || $match['destination_media']->base_media_id == $media->id

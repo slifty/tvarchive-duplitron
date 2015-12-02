@@ -116,4 +116,16 @@ class PerformMediaTask extends Job implements SelfHandling, ShouldQueue
         $this->task->save();
     }
 
+    /**
+     * Handle a job failure.
+     *
+     * @return void
+     */
+    public function failed()
+    {
+        // Called when the job is failing...
+        $this->task->status_code = Task::STATUS_FAILED;
+        $this->task->save();
+    }
+
 }

@@ -3,6 +3,7 @@
 Homestead.yaml
 Homestead.json
 .env
+duplitron-worker.conf
 
 /certs/*
 *.pem

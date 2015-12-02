@@ -119,7 +119,6 @@ class BasicLoader implements LoaderContract
         $audio_data = $parser->getFileInformation($temp_media_path);
         $slice_duration = env('FPRINT_CHUNK_LENGTH');
         $duration = $audio_data['duration']->total_seconds;
-        $slices = floor($duration / $slice_duration);
 
         // Perform the actual slicing
         if($duration > env('FPRINT_CHUNK_LENGTH'))
