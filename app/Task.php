@@ -39,7 +39,7 @@ class Task extends Model
      *
      * @var array
      */
-    protected $fillable = ['type'];
+    protected $fillable = ['type', 'attempts'];
 
     /**
      * The attributes excluded from the model's JSON form.
