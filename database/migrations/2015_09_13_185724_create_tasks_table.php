@@ -17,7 +17,7 @@ class CreateTasksTable extends Migration
             // Create fields
             $table->increments('id');
             $table->integer('media_id');
-            $table->integer('attempts');
+            $table->integer('attempts')->nullable();
             $table->string('type');
             $table->string('status_code')->nullable();
             $table->string('result_code')->nullable();
