@@ -75,7 +75,7 @@ class Task extends Model
         return $this->attributes['result'] = [
             "code" => $this->result_code,
             "data" => json_decode($this->result_data),
-            "output" => $this->result_output
+            "output" => json_decode($this->result_output)
         ];
     }
 

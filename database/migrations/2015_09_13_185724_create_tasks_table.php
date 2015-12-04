@@ -22,7 +22,7 @@ class CreateTasksTable extends Migration
             $table->string('status_code')->nullable();
             $table->string('result_code')->nullable();
             $table->json('result_data')->nullable();
-            $table->text('result_output')->nullable();
+            $table->json('result_output')->nullable();
             $table->timestamps();
 
             // Create indexes

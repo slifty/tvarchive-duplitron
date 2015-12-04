@@ -712,6 +712,7 @@ class AudfDockerFingerprinter implements FingerprinterContract
         $matches = [];
         foreach($logs as $line)
         {
+
             $match_pattern = '/Matched\s+(\S+)\s+s\s+starting\s+at\s+(\S+)\s+s\s+in\s+(\S+)\s+to\s+time\s+(\S+)\s+s\s+in\s+(\S+)\s+with\s+(\S+)\s+of\s+(\S+)\s+common\s+hashes\s+at\s+rank\s+(\S+)/';
             if(preg_match($match_pattern, $line, $match_data))
             {
@@ -746,6 +747,7 @@ class AudfDockerFingerprinter implements FingerprinterContract
                 array_push($matches, $match);
             }
         }
+
         return $matches;
     }
 

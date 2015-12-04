@@ -111,9 +111,26 @@ class PerformMediaTask extends Job implements SelfHandling, ShouldQueue
             return;
         }
 
+        // TODO: this is honestly the worst thing ever.
+        if($this->checkForErrors(json_encode($this->task->result_output)))
+            $this->task->status_code = Task::STATUS_FAILED;
+        else
+            $this->task->status_code = Task::STATUS_FINISHED;
+
         // Mark this as finished
         $this->task->status_code = Task::STATUS_FINISHED;
         $this->task->save();
+    }
+
+    // TODO: lol
+    private function checkForErrors($line)
+    {
+        $match_pattern = '/Traceback/';
+        // Did we find a log line that talks about drop count?
+        if(preg_match($match_pattern, $line))
+            return true;
+
+        return false;
     }
 
     /**
