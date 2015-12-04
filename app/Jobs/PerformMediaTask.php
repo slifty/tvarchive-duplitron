@@ -112,7 +112,7 @@ class PerformMediaTask extends Job implements SelfHandling, ShouldQueue
         }
 
         // TODO: this is honestly the worst thing ever.
-        if($this->checkForErrors(json_encode($this->task->result_output)))
+        if($this->hasErrors($this->task->result_output))
             $this->task->status_code = Task::STATUS_FAILED;
         else
             $this->task->status_code = Task::STATUS_FINISHED;
@@ -122,14 +122,13 @@ class PerformMediaTask extends Job implements SelfHandling, ShouldQueue
     }
 
     // TODO: lol
-    private function checkForErrors($line)
+    private function hasErrors($line)
     {
-        $match_pattern = '/Traceback/';
-        // Did we find a log line that talks about drop count?
-        if(preg_match($match_pattern, $line))
-            return true;
+        // Did we find a log line that talks about a Traceback?
+        if(strpos($line, 'Traceback') === false)
+            return false;
 
-        return false;
+        return true;
     }
 
     /**
