@@ -118,7 +118,6 @@ class PerformMediaTask extends Job implements SelfHandling, ShouldQueue
             $this->task->status_code = Task::STATUS_FINISHED;
 
         // Mark this as finished
-        $this->task->status_code = Task::STATUS_FINISHED;
         $this->task->save();
     }
 
