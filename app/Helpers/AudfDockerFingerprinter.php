@@ -246,7 +246,7 @@ class AudfDockerFingerprinter implements FingerprinterContract
         // (for now we will always have all parts added to the same database)
 
         // Obtain a file lock
-        $lockfile = $this->touchFlockFile(env('FPRINT_STORE'));
+        $lockfile = $this->touchFlockFile($database_path);
         if(flock($lockfile, LOCK_EX))
         {
             // Add the corpus items
