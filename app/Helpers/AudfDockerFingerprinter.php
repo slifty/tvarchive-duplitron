@@ -260,6 +260,10 @@ class AudfDockerFingerprinter implements FingerprinterContract
             // Release the lock
             flock($lockfile, LOCK_UN);
         }
+        else
+        {
+            throw \Exception("Couldn't obtain a lock for ".$database_path);
+        }
 
         // Close the file
         fclose($lockfile);
@@ -421,6 +425,10 @@ class AudfDockerFingerprinter implements FingerprinterContract
 
                 // Release the lock
                 flock($lockfile, LOCK_UN);
+            }
+            else
+            {
+                throw \Exception("Couldn't obtain a lock for ".$database_path);
             }
 
             // Close the file
@@ -614,6 +622,10 @@ class AudfDockerFingerprinter implements FingerprinterContract
 
                 // Release the lock
                 flock($lockfile, LOCK_UN);
+            }
+            else
+            {
+                throw \Exception("Couldn't obtain a lock for ".$database);
             }
 
             // Close the file
@@ -848,7 +860,7 @@ class AudfDockerFingerprinter implements FingerprinterContract
     private function touchFlockFile($path) {
         $flock_path = env('FPRINT_STORE').'flocks/'.str_replace('/', '_', $path)."flock";
         if(file_exists($flock_path))
-            return fopen($path, 'r+');
+            return fopen($flock_path, 'r+');
         return fopen($flock_path, 'w+');
     }
 }
