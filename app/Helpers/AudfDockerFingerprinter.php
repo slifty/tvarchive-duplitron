@@ -244,12 +244,25 @@ class AudfDockerFingerprinter implements FingerprinterContract
         // The file may be in parts, add each part individually
         // TODO: consider adding drop check to individual parts
         // (for now we will always have all parts added to the same database)
-        foreach($afpt_files['chunks'] as $afpt_file) {
 
-            $cmd = [$audf_command, '-d', AudfDockerFingerprinter::AUDFPRINT_DOCKER_PATH.$database_path, '--maxtime', '524288', AudfDockerFingerprinter::AUDFPRINT_DOCKER_PATH.'afpt_cache/'.$afpt_file];
-            $logs = $this->runDocker($cmd);
+        // Obtain a file lock
+        $lockfile = $this->touchFlockFile(env('FPRINT_STORE'));
+        if(flock($lockfile, LOCK_EX))
+        {
+            // Add the corpus items
+            foreach($afpt_files['chunks'] as $afpt_file) {
 
+                $cmd = [$audf_command, '-d', AudfDockerFingerprinter::AUDFPRINT_DOCKER_PATH.$database_path, '--maxtime', '524288', AudfDockerFingerprinter::AUDFPRINT_DOCKER_PATH.'afpt_cache/'.$afpt_file];
+                $logs = $this->runDocker($cmd);
+
+            }
+
+            // Release the lock
+            flock($lockfile, LOCK_UN);
         }
+
+        // Close the file
+        fclose($lockfile);
 
         // Did we fill the database?
         $drop_count = $this->getDropCount($logs);
@@ -394,13 +407,24 @@ class AudfDockerFingerprinter implements FingerprinterContract
         else
         {
 
-            // Delete each chunk
-            foreach($afpt_files['chunks'] as $afpt_file)
+            // Obtain a file lock
+            $lockfile = $this->touchFlockFile($database_path);
+            if(flock($lockfile, LOCK_EX))
             {
-                $audf_command = 'remove';
-                $cmd = [$audf_command, '-d', AudfDockerFingerprinter::AUDFPRINT_DOCKER_PATH.$database_path, AudfDockerFingerprinter::AUDFPRINT_DOCKER_PATH.'afpt_cache/'.$afpt_file];
-                $logs = $this->runDocker($cmd);
+                // Delete each chunk
+                foreach($afpt_files['chunks'] as $afpt_file)
+                {
+                    $audf_command = 'remove';
+                    $cmd = [$audf_command, '-d', AudfDockerFingerprinter::AUDFPRINT_DOCKER_PATH.$database_path, AudfDockerFingerprinter::AUDFPRINT_DOCKER_PATH.'afpt_cache/'.$afpt_file];
+                    $logs = $this->runDocker($cmd);
+                }
+
+                // Release the lock
+                flock($lockfile, LOCK_UN);
             }
+
+            // Close the file
+            fclose($lockfile);
         }
         return $logs;
     }
@@ -499,6 +523,9 @@ class AudfDockerFingerprinter implements FingerprinterContract
         unset($databases[0]);
         unset($databases[1]);
 
+        // Remove flocks
+
+
         // TODO: Filter corpus databases based on time
 
         // Prefix the cache path to each item
@@ -576,8 +603,22 @@ class AudfDockerFingerprinter implements FingerprinterContract
         // Run the match for each database
         foreach($databases as $database)
         {
-            $cmd = ['match', '-d', AudfDockerFingerprinter::AUDFPRINT_DOCKER_PATH.$database, '--find-time-range', '-x', '1000', AudfDockerFingerprinter::AUDFPRINT_DOCKER_PATH.'afpt_cache/'.$afpt_file];
-            $match_logs = $this->runDocker($cmd);
+            // Obtain a lock on the database
+            $lockfile = $this->touchFlockFile($database);
+            if(flock($lockfile, LOCK_SH))
+            {
+
+                // Run the match
+                $cmd = ['match', '-d', AudfDockerFingerprinter::AUDFPRINT_DOCKER_PATH.$database, '--find-time-range', '-x', '1000', AudfDockerFingerprinter::AUDFPRINT_DOCKER_PATH.'afpt_cache/'.$afpt_file];
+                $match_logs = $this->runDocker($cmd);
+
+                // Release the lock
+                flock($lockfile, LOCK_UN);
+            }
+
+            // Close the file
+            fclose($lockfile);
+
             $match_results = $this->processAudfMatchLog($match_logs);
 
             // Remove results that point to this particular media file
@@ -796,6 +837,19 @@ class AudfDockerFingerprinter implements FingerprinterContract
         }
 
         return $new_matches;
+    }
+
+
+    /**
+     * Opens a file, making sure it exists in the process
+     * @param  string $path The string to the path being opened
+     * @return
+     */
+    private function touchFlockFile($path) {
+        $flock_path = env('FPRINT_STORE').'flocks/'.str_replace('/', '_', $path)."flock";
+        if(file_exists($flock_path))
+            return fopen($path, 'r+');
+        return fopen($flock_path, 'w+');
     }
 }
 ?>
