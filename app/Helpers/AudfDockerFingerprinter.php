@@ -594,6 +594,10 @@ class AudfDockerFingerprinter implements FingerprinterContract
      */
     private function retireDatabase($database_path)
     {
+        // Is this already retired?
+        if(strpos($database_path, '-full') !== false)
+            return;
+
         // For now we mark a DB as full using it's filepath
         $new_path = str_replace('.pklz', '-full.pklz', $database_path);
         rename(env('FPRINT_STORE').$database_path, env('FPRINT_STORE').$new_path);
