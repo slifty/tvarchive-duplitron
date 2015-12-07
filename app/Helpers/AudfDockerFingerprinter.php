@@ -236,10 +236,6 @@ class AudfDockerFingerprinter implements FingerprinterContract
         $project = $media->project;
 
         $database_path = $this->getCurrentDatabase($match_type, $project);
-        if($this->getDatabaseStatus($database_path) == AudfDockerFingerprinter::DATABASE_STATUS_MISSING)
-            $audf_command = 'new';
-        else
-            $audf_command = 'add';
 
         // The file may be in parts, add each part individually
         // TODO: consider adding drop check to individual parts
@@ -249,6 +245,15 @@ class AudfDockerFingerprinter implements FingerprinterContract
         $lockfile = $this->touchFlockFile($database_path);
         if(flock($lockfile, LOCK_EX))
         {
+            // Now that we're locked, make sure the path hasn't moved
+            $database_path = $this->resolveDatabasePath($database_path);
+
+            // Are we making someting new or not
+            if($this->getDatabaseStatus($database_path) == AudfDockerFingerprinter::DATABASE_STATUS_MISSING)
+                $audf_command = 'new';
+            else
+                $audf_command = 'add';
+
             // Add the corpus items
             foreach($afpt_files['chunks'] as $afpt_file) {
 
@@ -378,7 +383,7 @@ class AudfDockerFingerprinter implements FingerprinterContract
         else
         {
             // Resolve the path (in case it is filed)
-            $database_path = $this->resolveDatabasePath($media->potential_target_database);
+            $database_path = $media->potential_target_database;
             $logs = $this->removeDatabaseItem($media, $database_path);
         }
 
@@ -406,15 +411,18 @@ class AudfDockerFingerprinter implements FingerprinterContract
         $afpt_files = $this->prepareMedia($media);
 
         // Does the database still exist?
-        if($this->getDatabaseStatus($database_path) == AudfDockerFingerprinter::DATABASE_STATUS_MISSING)
-            $logs = array("The database this was stored in no longer existed.");
-        else
+        // Obtain a file lock
+        $lockfile = $this->touchFlockFile($database_path);
+        if(flock($lockfile, LOCK_EX))
         {
+            // Now that we're locked, make sure the path hasn't moved
+            $database_path = $this->resolveDatabasePath($database_path);
 
-            // Obtain a file lock
-            $lockfile = $this->touchFlockFile($database_path);
-            if(flock($lockfile, LOCK_EX))
+            if($this->getDatabaseStatus($database_path) == AudfDockerFingerprinter::DATABASE_STATUS_MISSING)
+                $logs = array("The database this was stored in no longer existed.");
+            else
             {
+
                 // Delete each chunk
                 foreach($afpt_files['chunks'] as $afpt_file)
                 {
@@ -422,18 +430,18 @@ class AudfDockerFingerprinter implements FingerprinterContract
                     $cmd = [$audf_command, '-d', AudfDockerFingerprinter::AUDFPRINT_DOCKER_PATH.$database_path, AudfDockerFingerprinter::AUDFPRINT_DOCKER_PATH.'afpt_cache/'.$afpt_file];
                     $logs = $this->runDocker($cmd);
                 }
-
-                // Release the lock
-                flock($lockfile, LOCK_UN);
-            }
-            else
-            {
-                throw \Exception("Couldn't obtain a lock for ".$database_path);
             }
 
-            // Close the file
-            fclose($lockfile);
+            // Release the lock
+            flock($lockfile, LOCK_UN);
         }
+        else
+        {
+            throw \Exception("Couldn't obtain a lock for ".$database_path);
+        }
+
+        // Close the file
+        fclose($lockfile);
         return $logs;
     }
 
@@ -531,9 +539,6 @@ class AudfDockerFingerprinter implements FingerprinterContract
         unset($databases[0]);
         unset($databases[1]);
 
-        // Remove flocks
-
-
         // TODO: Filter corpus databases based on time
 
         // Prefix the cache path to each item
@@ -615,6 +620,8 @@ class AudfDockerFingerprinter implements FingerprinterContract
             $lockfile = $this->touchFlockFile($database);
             if(flock($lockfile, LOCK_SH))
             {
+                // Now that we're locked, make sure the path hasn't moved
+                $database = $this->resolveDatabasePath($database);
 
                 // Run the match
                 $cmd = ['match', '-d', AudfDockerFingerprinter::AUDFPRINT_DOCKER_PATH.$database, '--find-time-range', '-x', '1000', AudfDockerFingerprinter::AUDFPRINT_DOCKER_PATH.'afpt_cache/'.$afpt_file];
@@ -858,6 +865,8 @@ class AudfDockerFingerprinter implements FingerprinterContract
      * @return
      */
     private function touchFlockFile($path) {
+        // remove the "-full" status -- we want to lock it regardless of how filled it is.
+        $path = str_replace('-full','');
         $flock_path = env('FPRINT_STORE').'flocks/'.str_replace('/', '_', $path)."flock";
         if(file_exists($flock_path))
             return fopen($flock_path, 'r+');
