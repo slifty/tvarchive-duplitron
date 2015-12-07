@@ -264,10 +264,10 @@ class AudfDockerFingerprinter implements FingerprinterContract
 
             // Did we fill the database?
             $drop_count = $this->getDropCount($logs);
-            // if($drop_count > 0)
-            // {
+            if($drop_count > 0)
+            {
                 $this->retireDatabase($database_path);
-            //}
+            }
 
             // Release the lock
             flock($lockfile, LOCK_UN);
