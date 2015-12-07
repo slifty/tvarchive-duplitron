@@ -866,7 +866,7 @@ class AudfDockerFingerprinter implements FingerprinterContract
      */
     private function touchFlockFile($path) {
         // remove the "-full" status -- we want to lock it regardless of how filled it is.
-        $path = str_replace('-full','');
+        $path = str_replace('-full','', $path);
         $flock_path = env('FPRINT_STORE').'flocks/'.str_replace('/', '_', $path)."flock";
         if(file_exists($flock_path))
             return fopen($flock_path, 'r+');
