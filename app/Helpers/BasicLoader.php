@@ -28,7 +28,7 @@ class BasicLoader implements LoaderContract
         $media_path = $parsed_url['path'];
 
         $parsed_path = pathinfo($media_path);
-        $file_type = (array_key_exists('user', $parsed_path))?$parsed_path['extension']:"mp3";
+        $file_type = (array_key_exists('extension', $parsed_path))?$parsed_path['extension']:"mp3";
 
         // Set up the pieces of the destination file names
         $temp_media_base_file = "media-".$media->id;
@@ -103,11 +103,21 @@ class BasicLoader implements LoaderContract
             // Extract the section we care about
             $start = new \PHPVideoToolkit\Timecode($media->start);
             $end = new \PHPVideoToolkit\Timecode($media->start + $media->duration);
-            $audio  = new \PHPVideoToolkit\Audio($temp_media_path, null, null, false);
-            $command = $audio->extractSegment($start, $end);
 
+            // Process differently based on the file type
+            switch($file_type)
+            {
+                case 'mp3':
+                    $audio  = new \PHPVideoToolkit\Audio($temp_media_path, null, null, false);
+                    $command = $audio->extractSegment($start, $end);
+                    break;
+                case 'mp4':
+                    $video  = new \PHPVideoToolkit\Video($temp_media_path, null, null, false);
+                    $command = $video->extractSegment($start, $end);
+                    break;
+            }
             // We need to save as a separate file then overwrite
-            $trimmed_media_path = $temp_media_path."trimmed.mp3";
+            $trimmed_media_path = $temp_media_path."trimmed.".$file_type;
             $process = $command->save($trimmed_media_path, null, true);
             rename($trimmed_media_path, $temp_media_path);
         }
@@ -116,17 +126,27 @@ class BasicLoader implements LoaderContract
 
         // Calculate the number of chunks needed
         $parser = new \PHPVideoToolkit\MediaParser();
-        $audio_data = $parser->getFileInformation($temp_media_path);
+        $media_data = $parser->getFileInformation($temp_media_path);
         $slice_duration = env('FPRINT_CHUNK_LENGTH');
-        $duration = $audio_data['duration']->total_seconds;
+        $duration = $media_data['duration']->total_seconds;
 
         // Perform the actual slicing
         if($duration > env('FPRINT_CHUNK_LENGTH'))
         {
-            $audio  = new \PHPVideoToolkit\Audio($temp_media_path, null, null, false);
-            $slices = $audio->split(env('FPRINT_CHUNK_LENGTH'));
+            switch($file_type)
+            {
+                case 'mp3':
+                    $audio  = new \PHPVideoToolkit\Audio($temp_media_path, null, null, false);
+                    $slices = $audio->split(env('FPRINT_CHUNK_LENGTH'));
+                    break;
+                case 'mp4':
+                    $video  = new \PHPVideoToolkit\Video($temp_media_path, null, null, false);
+                    $slices = $video->split(env('FPRINT_CHUNK_LENGTH'));
+                    break;
+            }
             $process = $slices->save($temp_media_base_path.$temp_media_base_file."_%index.".$file_type);
             $output = $process->getOutput();
+
             // Get the filenames
             foreach($output as $chunk)
             {

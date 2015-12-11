@@ -762,6 +762,10 @@ class AudfDockerFingerprinter implements FingerprinterContract
             $logs = array_merge($logs,explode("\n", $output));
         });
 
+        // Clean up after yourself, it's only polite
+        $manager->stop($container);
+        $manager->remove($container, false, true);
+
         return $logs;
     }
 
