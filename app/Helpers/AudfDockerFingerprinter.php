@@ -257,7 +257,7 @@ class AudfDockerFingerprinter implements FingerprinterContract
             // Add the corpus items
             foreach($afpt_files['chunks'] as $afpt_file) {
 
-                $cmd = [$audf_command, '-d', AudfDockerFingerprinter::AUDFPRINT_DOCKER_PATH.$database_path, '--maxtime', '524288', AudfDockerFingerprinter::AUDFPRINT_DOCKER_PATH.'afpt_cache/'.$afpt_file];
+                $cmd = [$audf_command, '-d', AudfDockerFingerprinter::AUDFPRINT_DOCKER_PATH.$database_path, '--maxtime', '524288', '--density', '100', '--shifts', '1', AudfDockerFingerprinter::AUDFPRINT_DOCKER_PATH.'afpt_cache/'.$afpt_file];
                 $logs = $this->runDocker($cmd);
 
             }
@@ -390,6 +390,33 @@ class AudfDockerFingerprinter implements FingerprinterContract
         // Update the media file
         $media->is_potential_target = false;
         $media->potential_target_database = "";
+        $media->save();
+
+        return array(
+            'results' => true,
+            'output' => $logs
+        );
+    }
+
+
+    /**
+     * See contract for documentation
+     */
+    public function removeCorpusItem($media)
+    {
+        // Make sure this media is actually a target
+        if(!$media->is_corpus)
+            $logs = array("This file isn't a potential target");
+        else
+        {
+            // Resolve the path (in case it is filed)
+            $database_path = $media->corpus_database;
+            $logs = $this->removeDatabaseItem($media, $database_path);
+        }
+
+        // Update the media file
+        $media->is_corpus = false;
+        $media->corpus_database = "";
         $media->save();
 
         return array(
@@ -628,7 +655,7 @@ class AudfDockerFingerprinter implements FingerprinterContract
                 $database = $this->resolveDatabasePath($database);
 
                 // Run the match
-                $cmd = ['match', '-d', AudfDockerFingerprinter::AUDFPRINT_DOCKER_PATH.$database, '--find-time-range', '-x', '1000', AudfDockerFingerprinter::AUDFPRINT_DOCKER_PATH.'afpt_cache/'.$afpt_file];
+                $cmd = ['match', '-d', AudfDockerFingerprinter::AUDFPRINT_DOCKER_PATH.$database, '--find-time-range', '-x', '1000', '--match-win', '10', AudfDockerFingerprinter::AUDFPRINT_DOCKER_PATH.'afpt_cache/'.$afpt_file];
                 $match_logs = $this->runDocker($cmd);
 
                 // Release the lock

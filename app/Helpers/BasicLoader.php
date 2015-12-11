@@ -108,6 +108,7 @@ class BasicLoader implements LoaderContract
             switch($file_type)
             {
                 case 'mp3':
+                case 'wav':
                     $audio  = new \PHPVideoToolkit\Audio($temp_media_path, null, null, false);
                     $command = $audio->extractSegment($start, $end);
                     break;
@@ -136,6 +137,7 @@ class BasicLoader implements LoaderContract
             switch($file_type)
             {
                 case 'mp3':
+                case 'wav':
                     $audio  = new \PHPVideoToolkit\Audio($temp_media_path, null, null, false);
                     $slices = $audio->split(env('FPRINT_CHUNK_LENGTH'));
                     break;
