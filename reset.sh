@@ -1,5 +1,6 @@
-sudo rm storage/audfprint/media_cache/*
+docker ps -a | awk '{print $1}' | xargs docker rm
+sudo find storage/audfprint/media_cache/ -name "*.*" -print0 | xargs -0 rm
 sudo rm -fr storage/audfprint/pklz_cache/*
-sudo rm storage/audfprint/afpt_cache/*
+sudo find storage/audfprint/afpt_cache/ -name "*.*" -print0 | xargs -0 rm
 sudo rm storage/audfprint/flocks/*
 php artisan migrate:refresh

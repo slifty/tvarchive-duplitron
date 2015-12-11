@@ -730,7 +730,7 @@ class AudfDockerFingerprinter implements FingerprinterContract
 
 
     /**
-     * Create and run a docker image
+     * Run a docker image
      * @param  string[] $cmd The list of commands to invoke in the docker image
      */
     private function runDocker($cmd) {
@@ -753,7 +753,7 @@ class AudfDockerFingerprinter implements FingerprinterContract
         );
 
         $manager = $docker->getContainerManager();
-        $manager->create($container);
+        //$manager->create($container);
 
         // Gather the logs and return them to the caller
         $logs = [];
