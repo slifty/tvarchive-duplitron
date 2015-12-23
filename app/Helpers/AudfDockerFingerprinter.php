@@ -255,11 +255,16 @@ class AudfDockerFingerprinter implements FingerprinterContract
                 $audf_command = 'add';
 
             // Add the corpus items
+            $logs = array();
             foreach($afpt_files['chunks'] as $afpt_file) {
 
-                $cmd = [$audf_command, '-d', AudfDockerFingerprinter::AUDFPRINT_DOCKER_PATH.$database_path, '--maxtime', '524288', '--density', '100', '--shifts', '1', AudfDockerFingerprinter::AUDFPRINT_DOCKER_PATH.'afpt_cache/'.$afpt_file];
-                $logs = $this->runDocker($cmd);
+                $cmd = [$audf_command, '-d', AudfDockerFingerprinter::AUDFPRINT_DOCKER_PATH.$database_path, '--maxtime', '262144', '--density', '20', AudfDockerFingerprinter::AUDFPRINT_DOCKER_PATH.'afpt_cache/'.$afpt_file];
 
+                // It is possible we just created a database, so the next clip would need to be added rather than overwritten.
+                $audf_command = 'add';
+
+                // Append the logs
+                $logs = array_merge($logs, $this->runDocker($cmd));
             }
 
             // Did we fill the database?
@@ -406,7 +411,7 @@ class AudfDockerFingerprinter implements FingerprinterContract
     {
         // Make sure this media is actually a target
         if(!$media->is_corpus)
-            $logs = array("This file isn't a potential target");
+            $logs = array("This file isn't a corpus item");
         else
         {
             // Resolve the path (in case it is filed)
@@ -655,7 +660,7 @@ class AudfDockerFingerprinter implements FingerprinterContract
                 $database = $this->resolveDatabasePath($database);
 
                 // Run the match
-                $cmd = ['match', '-d', AudfDockerFingerprinter::AUDFPRINT_DOCKER_PATH.$database, '--find-time-range', '-x', '1000', '--match-win', '10', AudfDockerFingerprinter::AUDFPRINT_DOCKER_PATH.'afpt_cache/'.$afpt_file];
+                $cmd = ['match', '-d', AudfDockerFingerprinter::AUDFPRINT_DOCKER_PATH.$database, '--find-time-range', '-x', '1000', '--match-win', '2', AudfDockerFingerprinter::AUDFPRINT_DOCKER_PATH.'afpt_cache/'.$afpt_file];
                 $match_logs = $this->runDocker($cmd);
 
                 // Release the lock
@@ -719,6 +724,7 @@ class AudfDockerFingerprinter implements FingerprinterContract
         {
             $parsed_path = pathinfo($chunk_file);
             $chunk_afpt_file = $parsed_path['filename'].'.afpt';
+
             if(!is_file($fprint_path_base.$chunk_afpt_file))
                 $fprint_files['chunks'][] = $this->createFingerprint($chunk_file);
             else
@@ -737,7 +743,7 @@ class AudfDockerFingerprinter implements FingerprinterContract
      */
     private function createFingerprint($media_file) {
 
-        $cmd = ['precompute', AudfDockerFingerprinter::AUDFPRINT_DOCKER_PATH.'media_cache/'.$media_file];
+        $cmd = ['precompute', '--density', '20', AudfDockerFingerprinter::AUDFPRINT_DOCKER_PATH.'media_cache/'.$media_file];
         $logs = $this->runDocker($cmd);
 
         $parsed_path = pathinfo($media_file);

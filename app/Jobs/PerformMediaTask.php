@@ -84,6 +84,13 @@ class PerformMediaTask extends Job implements SelfHandling, ShouldQueue
                     $this->task->save();
                     break;
 
+                case Task::TYPE_CORPUS_REMOVE:
+                    $results = $fingerprinter->removeCorpusItem($this->task->media);
+                    $this->task->result_data = json_encode($results['results']);
+                    $this->task->result_output = json_encode($results['output']);
+                    $this->task->save();
+                    break;
+
                 case Task::TYPE_POTENTIAL_TARGET_REMOVE:
                     $results = $fingerprinter->removePotentialTargetsItem($this->task->media);
                     $this->task->result_data = json_encode($results['results']);
