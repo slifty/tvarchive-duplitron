@@ -317,7 +317,7 @@ class AudfDockerFingerprinter implements FingerprinterContract
     {
         // Make sure this media hasn't already been added
         if($media->is_corpus)
-            return;
+            throw new \Exception("This is already a corpus item");
 
         // Run the database insertion
         $result = $this->addDatabaseItem($media, AudfDockerFingerprinter::MATCH_CORPUS);
@@ -338,7 +338,7 @@ class AudfDockerFingerprinter implements FingerprinterContract
     {
         // Make sure this media hasn't already been added
         if($media->is_distractor)
-            return;
+            throw new \Exception("This is already a distractor");
 
         // Run the database insertion
         $result = $this->addDatabaseItem($media, AudfDockerFingerprinter::MATCH_DISTRACTOR);
@@ -359,7 +359,7 @@ class AudfDockerFingerprinter implements FingerprinterContract
     {
         // Make sure this media hasn't already been added
         if($media->is_potential_target)
-            return;
+            throw new \Exception("This is already a potential target");
 
         // Run the database insertion
         $result = $this->addDatabaseItem($media, AudfDockerFingerprinter::MATCH_POTENTIAL_TARGET);
@@ -380,7 +380,7 @@ class AudfDockerFingerprinter implements FingerprinterContract
     {
         // Make sure this media hasn't already been added
         if($media->is_target)
-            return;
+            throw new \Exception("This is already a target");
 
         // Run the database insertion
         $result = $this->addDatabaseItem($media, AudfDockerFingerprinter::MATCH_TARGET);
