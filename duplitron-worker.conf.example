@@ -1,6 +1,6 @@
 [program:duplitron-worker]
 process_name=%(program_name)s_%(process_num)02d
-command=php /example/path/to/your/artisan queue:work database --sleep=3 --tries=1 --daemon
+command=php /example/path/to/your/artisan queue:work database --memory=500 --tries=0
 autostart=true
 autorestart=true
 user=exampleuser
