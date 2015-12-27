@@ -648,7 +648,6 @@ class AudfDockerFingerprinter implements FingerprinterContract
         $afpt_file = $afpt_files['full'];
         $results = array();
         $logs = array();
-
         // Run the match for each database
         foreach($databases as $database)
         {
@@ -683,6 +682,7 @@ class AudfDockerFingerprinter implements FingerprinterContract
             $results = array_merge($results, $match_results);
         }
 
+
         // Return the logs and results
         return array(
             'results' => $results,
@@ -698,37 +698,43 @@ class AudfDockerFingerprinter implements FingerprinterContract
      */
     private function prepareMedia($media)
     {
-        // Load the media
-        $media_files = $this->loader->loadMedia($media);
-        $media_path_base = env('FPRINT_STORE').'media_cache/';
-        $fprint_path_base = env('FPRINT_STORE').'afpt_cache/';
+        // First attempt to load the fingerprints
+        $fprint_files = $this->loader->loadFingerprints($media);
 
-        $fprint_files = array(
-            'full' => '',
-            'chunks' => array()
-        );
+        if($fprint_files == null) {
+            // If fingerprints aren't properly provided, we will have to generate them
+            // Load the media
+            $media_files = $this->loader->loadMedia($media);
+            $media_path_base = env('FPRINT_STORE').'media_cache/';
+            $fprint_path_base = env('FPRINT_STORE').'afpt_cache/';
 
-        // Figure out what fingerprints we're missing
-        $needed_fingerprints = array();
-        $parsed_path = pathinfo($media_files['full']);
+            $fprint_files = array(
+                'full' => '',
+                'chunks' => array()
+            );
 
-        // Check out the full file first
-        $full_afpt_file = $parsed_path['filename'].'.afpt';
-        if(!is_file($fprint_path_base.$full_afpt_file))
-            $fprint_files['full'] = $this->createFingerprint($media_files['full']);
-        else
-            $fprint_files['full'] = $full_afpt_file;
+            // Figure out what fingerprints we're missing
+            $needed_fingerprints = array();
+            $parsed_path = pathinfo($media_files['full']);
 
-        // Now try each chunk
-        foreach($media_files['chunks'] as $chunk_file)
-        {
-            $parsed_path = pathinfo($chunk_file);
-            $chunk_afpt_file = $parsed_path['filename'].'.afpt';
-
-            if(!is_file($fprint_path_base.$chunk_afpt_file))
-                $fprint_files['chunks'][] = $this->createFingerprint($chunk_file);
+            // Check out the full file first
+            $full_afpt_file = $parsed_path['filename'].'.afpt';
+            if(!is_file($fprint_path_base.$full_afpt_file))
+                $fprint_files['full'] = $this->createFingerprint($media_files['full']);
             else
-                $fprint_files['chunks'][] = $chunk_afpt_file;
+                $fprint_files['full'] = $full_afpt_file;
+
+            // Now try each chunk
+            foreach($media_files['chunks'] as $chunk_file)
+            {
+                $parsed_path = pathinfo($chunk_file);
+                $chunk_afpt_file = $parsed_path['filename'].'.afpt';
+
+                if(!is_file($fprint_path_base.$chunk_afpt_file))
+                    $fprint_files['chunks'][] = $this->createFingerprint($chunk_file);
+                else
+                    $fprint_files['chunks'][] = $chunk_afpt_file;
+            }
         }
 
         // Move the precompute file

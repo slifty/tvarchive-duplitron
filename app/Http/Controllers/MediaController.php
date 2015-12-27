@@ -87,7 +87,7 @@ class MediaController extends Controller
         else
         {
             $media->media_path = $request->input('media_path');
-            $media->afpt_path = '';
+            $media->afpt_path = $request->input('afpt_path');
 
             // Store the external ID if it exists
             if($request->has('external_id'))
