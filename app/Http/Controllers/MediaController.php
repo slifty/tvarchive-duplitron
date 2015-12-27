@@ -83,6 +83,7 @@ class MediaController extends Controller
 
             // We copy the base media from the parent, but NOT the fingerprints
             $media->media_path = $base_media->media_path;
+            $media->afpt_path = '';
             $media->external_id = $base_media->external_id;
         }
         else

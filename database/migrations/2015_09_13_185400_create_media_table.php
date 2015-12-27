@@ -19,7 +19,7 @@ class CreateMediaTable extends Migration
             $table->integer('project_id');
             $table->integer('base_media_id')->nullable();
             $table->text('media_path');
-            $table->text('afpt_path');
+            $table->text('afpt_path')->nullable();
             $table->text('external_id')->nullable();
             $table->text('start');
             $table->text('duration');
