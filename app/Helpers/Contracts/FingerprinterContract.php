@@ -50,7 +50,7 @@ interface FingerprinterContract
      * @param  object $media the media object being matched against the various corpuses
      * @return object        the result object, containing output logs and data
      */
-    //public function removeCorpusItem($media);
+    public function removeCorpusItem($media);
 
 
     /**
@@ -58,7 +58,7 @@ interface FingerprinterContract
      * @param  object $media the media object being matched against the various corpuses
      * @return object        the result object, containing output logs and data
      */
-    //public function removeDistractorsItem($media);
+    public function removeDistractorsItem($media);
 
 
     /**
@@ -74,7 +74,7 @@ interface FingerprinterContract
      * @param  object $media the media object being matched against the various corpuses
      * @return object        the result object, containing output logs and data
      */
-    //public function removeTargetsItem($afpt_file);
+    public function removeTargetsItem($afpt_file);
 
 
 }

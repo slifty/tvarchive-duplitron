@@ -70,3 +70,7 @@ To run this code you need:
 		sudo supervisorctl start duplitron-worker:*
 	```
 
+
+// Run ssh -fN -o"ControlPath none" -L 9999:tv-se.archive.org:8983 vm-home1.archive.org
+// so that requests are proxied through
+

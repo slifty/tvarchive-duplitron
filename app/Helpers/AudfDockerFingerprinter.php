@@ -158,7 +158,6 @@ class AudfDockerFingerprinter implements FingerprinterContract
         $start = -1;
         $end = -1;
         $type = '';
-        $matched_files = [];
         $is_new_match = true;
 
         while($match = array_shift($matches))
@@ -422,6 +421,60 @@ class AudfDockerFingerprinter implements FingerprinterContract
         // Update the media file
         $media->is_corpus = false;
         $media->corpus_database = "";
+        $media->save();
+
+        return array(
+            'results' => true,
+            'output' => $logs
+        );
+    }
+
+
+    /**
+     * See contract for documentation
+     */
+    public function removeTargetsItem($media)
+    {
+        // Make sure this media is actually a target
+        if(!$media->is_target)
+            $logs = array("This file isn't a target item");
+        else
+        {
+            // Resolve the path (in case it is filed)
+            $database_path = $media->target_database;
+            $logs = $this->removeDatabaseItem($media, $database_path);
+        }
+
+        // Update the media file
+        $media->is_target = false;
+        $media->target_database = "";
+        $media->save();
+
+        return array(
+            'results' => true,
+            'output' => $logs
+        );
+    }
+
+
+    /**
+     * See contract for documentation
+     */
+    public function removeDistractorsItem($media)
+    {
+        // Make sure this media is actually a target
+        if(!$media->is_distractor)
+            $logs = array("This file isn't a distractor item");
+        else
+        {
+            // Resolve the path (in case it is filed)
+            $database_path = $media->distractor_database;
+            $logs = $this->removeDatabaseItem($media, $database_path);
+        }
+
+        // Update the media file
+        $media->is_distractor = false;
+        $media->distractor_database = "";
         $media->save();
 
         return array(

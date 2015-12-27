@@ -12,9 +12,7 @@ class BasicLoader implements LoaderContract
      */
     public function loadFingerprints($media)
     {
-
         // TODO: do a better job of checking if the fingerprints exist already
-        // TODO: clean up after extracting the zip file
 
         // Set up the basics
         $return_files = array(
@@ -81,6 +79,9 @@ class BasicLoader implements LoaderContract
                     // Move the file
                     copy($archive_file_path, $chunk_file_path);
 
+                    // Delete the file
+                    unlink($archive_file_path);
+
                     // Register it
                     $return_files['chunks'][] = $chunk_file;
                 }
@@ -94,12 +95,20 @@ class BasicLoader implements LoaderContract
                     // Move the file
                     copy($archive_file_path, $fingerprint_file_path);
 
+                    // Delete the file
+                    unlink($archive_file_path);
+
                     // Register it
                     $return_files['full'] = $fingerprint_file;
                 }
-
-
             }
+
+            // Delete the zip file and the empty unzipped folder
+            unlink($detination_afpt_archive_path);
+
+            // Delete the empty unzipped folder
+            rmdir($detination_afpt_extraction_path);
+
         } else {
             // Failed to open the zip file
             throw new \Exception("Unable to extract the fingerprint archive.");
@@ -144,7 +153,7 @@ class BasicLoader implements LoaderContract
         // if(file_exists($temp_media_path))
         // {
         //     // Load the cached chunks as well
-        //     $chunk_glob_path = $temp_media_base_path.$temp_media_base_file."_*.".$file_type;
+        //     $chunk_glob_path = $destination_directory.$destination_file_base."_*.".$file_type;
         //     // Return the cached values
         //     $chunk_paths = glob($chunk_glob_path);
 
@@ -153,8 +162,6 @@ class BasicLoader implements LoaderContract
 
         //     return $return_files;
         // }
-
-
 
         // Set up PHPVideoToolkit (for use in the next steps)
         $config = new \PHPVideoToolkit\Config(array(
@@ -214,7 +221,7 @@ class BasicLoader implements LoaderContract
                     $slices = $video->split(env('FPRINT_CHUNK_LENGTH'));
                     break;
             }
-            $process = $slices->save($temp_media_base_path.$temp_media_base_file."_%index.".$file_type);
+            $process = $slices->save($destination_directory.$destination_file_base."_%index.".$file_type);
             $output = $process->getOutput();
 
             // Get the filenames
@@ -235,11 +242,11 @@ class BasicLoader implements LoaderContract
 
 
     /**
-     * Loads a file into a specified directory
+     * Loads a file into a specified directory, returns the file name that was created
      * @param  string $source_path           The full path to the file being loaded
      * @param  string $destination_directory The directory the file should be stored in
      * @param  string $destination_file_base The base name (not including extension) of the destination
-     * @return string                        The full path to the final file
+     * @return string                        The name of the final file
      */
     private function loadFile($source_url, $destination_directory, $destination_file_base, $file_type)
     {
