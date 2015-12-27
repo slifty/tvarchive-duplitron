@@ -49,19 +49,22 @@ class AudfDockerFingerprinter implements FingerprinterContract
 
         /////
         // Find all matches with stored items
+        $task_logs[] = $this->logLine("Starting");
 
         // Find matches with corpus items
+        $task_logs[] = $this->logLine("Start: Corpus multimatch");
         $databases = $this->getDatabases(AudfDockerFingerprinter::MATCH_CORPUS, $project);
         $results = $this->multiMatch($media, $databases);
         $task_logs = array_merge($task_logs, $results['logs']);
         $corpus_results = $results['results'];
-
         array_walk($corpus_results, function(&$result)
         {
             $result['type'] = AudfDockerFingerprinter::MATCH_CORPUS;
         });
+        $task_logs[] = $this->logLine("End:   Corpus multimatch");
 
         // Find matches with potential target items
+        $task_logs[] = $this->logLine("Start: Potential target multimatch");
         $databases = $this->getDatabases(AudfDockerFingerprinter::MATCH_POTENTIAL_TARGET, $project);
         $results = $this->multiMatch($media, $databases);
         $task_logs = array_merge($task_logs, $results['logs']);
@@ -70,8 +73,10 @@ class AudfDockerFingerprinter implements FingerprinterContract
         {
             $result['type'] = AudfDockerFingerprinter::MATCH_POTENTIAL_TARGET;
         });
+        $task_logs[] = $this->logLine("End:   Corpus multimatch");
 
         // Find matches with distractor items
+        $task_logs[] = $this->logLine("Start: Distractor multimatch");
         $databases = $this->getDatabases(AudfDockerFingerprinter::MATCH_DISTRACTOR, $project);
         $results = $this->multiMatch($media, $databases);
         $task_logs = array_merge($task_logs, $results['logs']);
@@ -80,8 +85,10 @@ class AudfDockerFingerprinter implements FingerprinterContract
         {
             $result['type'] = AudfDockerFingerprinter::MATCH_DISTRACTOR;
         });
+        $task_logs[] = $this->logLine("End:   Corpus multimatch");
 
         // Find matches with target items
+        $task_logs[] = $this->logLine("Start: Target multimatch");
         $databases = $this->getDatabases(AudfDockerFingerprinter::MATCH_TARGET, $project);
         $results = $this->multiMatch($media, $databases);
         $task_logs = array_merge($task_logs, $results['logs']);
@@ -90,6 +97,7 @@ class AudfDockerFingerprinter implements FingerprinterContract
         {
             $result['type'] = AudfDockerFingerprinter::MATCH_TARGET;
         });
+        $task_logs[] = $this->logLine("End:   Target multimatch");
 
 
         /////
@@ -99,6 +107,7 @@ class AudfDockerFingerprinter implements FingerprinterContract
         // Create a master list of matches
         $matches = array_merge($corpus_results, $potential_targets_results, $distractors_results, $targets_results);
 
+        $task_logs[] = $this->logLine("Start: Save Matches");
         // Save any previously unsaved matches
         foreach($matches as $match)
         {
@@ -134,7 +143,10 @@ class AudfDockerFingerprinter implements FingerprinterContract
                 // TODO: check to be sure the exception is a dupe key (which is OK)
             }
         }
+        $task_logs[] = $this->logLine("End:   Save Matches");
 
+
+        $task_logs[] = $this->logLine("Start: Resolve Matches");
         // Sort all matches list by start time
         $start_sort = function($a, $b)
         {
@@ -207,6 +219,8 @@ class AudfDockerFingerprinter implements FingerprinterContract
             // Add the next back to the list
             array_unshift($matches, $next_match);
         }
+        $task_logs[] = $this->logLine("End:   Resolve Matches");
+
 
         $results = [
             "matches" => [
@@ -233,6 +247,7 @@ class AudfDockerFingerprinter implements FingerprinterContract
     {
         $afpt_files = $this->prepareMedia($media);
         $project = $media->project;
+        $task_logs = array();
 
         $database_path = $this->getCurrentDatabase($match_type, $project);
 
@@ -241,9 +256,11 @@ class AudfDockerFingerprinter implements FingerprinterContract
         // (for now we will always have all parts added to the same database)
 
         // Obtain a file lock
+        $task_logs[] = $this->logLine("Start: Obtaining file lock for ".$database_path);
         $lockfile = $this->touchFlockFile($database_path);
         if(flock($lockfile, LOCK_EX))
         {
+            $task_logs[] = $this->logLine("End:   Obtaining file lock for ".$database_path);
             // Now that we're locked, make sure the path hasn't moved
             $database_path = $this->resolveDatabasePath($database_path);
 
@@ -254,7 +271,7 @@ class AudfDockerFingerprinter implements FingerprinterContract
                 $audf_command = 'add';
 
             // Add the corpus items
-            $logs = array();
+            $task_logs[] = $this->logLine("Start: Storing fingerprints");
             foreach($afpt_files['chunks'] as $afpt_file) {
 
                 $cmd = [$audf_command, '-d', AudfDockerFingerprinter::AUDFPRINT_DOCKER_PATH.$database_path, '--maxtime', '262144', '--density', '20', AudfDockerFingerprinter::AUDFPRINT_DOCKER_PATH.'afpt_cache/'.$afpt_file];
@@ -263,11 +280,12 @@ class AudfDockerFingerprinter implements FingerprinterContract
                 $audf_command = 'add';
 
                 // Append the logs
-                $logs = array_merge($logs, $this->runDocker($cmd));
+                $task_logs = array_merge($task_logs, $this->runDocker($cmd));
             }
+            $task_logs[] = $this->logLine("End:   Storing fingerprints");
 
             // Did we fill the database?
-            $drop_count = $this->getDropCount($logs);
+            $drop_count = $this->getDropCount($task_logs);
             if($drop_count > 0)
             {
                 $this->retireDatabase($database_path);
@@ -286,7 +304,7 @@ class AudfDockerFingerprinter implements FingerprinterContract
 
         return array(
             'results' => true,
-            'output' => $logs,
+            'output' => $task_logs,
             'database' => $database_path
         );
     }
@@ -697,23 +715,32 @@ class AudfDockerFingerprinter implements FingerprinterContract
      */
     private function multiMatch($media, $databases)
     {
+        $logs = array();
+
+        $logs[] = $this->logLine("Start: Preparing media");
         $afpt_files = $this->prepareMedia($media);
+        $logs[] = $this->logLine("End:   Preparing media");
+
         $afpt_file = $afpt_files['full'];
         $results = array();
-        $logs = array();
+
         // Run the match for each database
         foreach($databases as $database)
         {
+            $logs[] = $this->logLine("Start: Obtaining lock for ".$database);
             // Obtain a lock on the database
             $lockfile = $this->touchFlockFile($database);
             if(flock($lockfile, LOCK_SH))
             {
+                $logs[] = $this->logLine("End:   Obtaining lock for ".$database);
                 // Now that we're locked, make sure the path hasn't moved
                 $database = $this->resolveDatabasePath($database);
 
                 // Run the match
+                $logs[] = $this->logLine("Start: Running match in ".$database);
                 $cmd = ['match', '-d', AudfDockerFingerprinter::AUDFPRINT_DOCKER_PATH.$database, '--find-time-range', '-x', '1000', '--match-win', '2', AudfDockerFingerprinter::AUDFPRINT_DOCKER_PATH.'afpt_cache/'.$afpt_file];
                 $match_logs = $this->runDocker($cmd);
+                $logs[] = $this->logLine("End:   Running match in ".$database);
 
                 // Release the lock
                 flock($lockfile, LOCK_UN);
@@ -979,6 +1006,15 @@ class AudfDockerFingerprinter implements FingerprinterContract
         if(file_exists($flock_path))
             return fopen($flock_path, 'r+');
         return fopen($flock_path, 'w+');
+    }
+
+    /**
+     * Create a line for the log file
+     * @param  string $message the message to include in the log
+     * @return string          the final log line
+     */
+    private function logLine($message) {
+        return date('h:i:s')." - ".$message;
     }
 }
 ?>

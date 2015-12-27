@@ -147,106 +147,112 @@ class BasicLoader implements LoaderContract
         // Set up the pieces of the destination file names
         $destination_file_base = "media-".$media->id;
         $destination_directory = env('FPRINT_STORE').'media_cache/';
-        $temp_media_file = $this->loadFile($source_media_path, $destination_directory, $destination_file_base, $file_type);
+        $temp_media_file = $destination_file_base.".".$file_type;
         $temp_media_path = $destination_directory.$temp_media_file;
 
-        if($temp_media_file == "")
-            throw new \Exception("Could not download the media: ".$source_media_path);
-
-        // Save the media path
-        $return_files['full'] = $temp_media_file;
-
-        // TODO: Figure out if the file parts already exist
-        // if(file_exists($temp_media_path))
-        // {
-        //     // Load the cached chunks as well
-        //     $chunk_glob_path = $destination_directory.$destination_file_base."_*.".$file_type;
-        //     // Return the cached values
-        //     $chunk_paths = glob($chunk_glob_path);
-
-        //     foreach($chunk_paths as $chunk_path)
-        //         $return_files['chunks'][] = basename($chunk_path);
-
-        //     return $return_files;
-        // }
-
-        // Set up PHPVideoToolkit (for use in the next steps)
-        $config = new \PHPVideoToolkit\Config(array(
-            'temp_directory' => '/tmp',
-            'ffmpeg' => env('FFMPEG_BINARY_PATH'),
-            'ffprobe' => env('FFPROBE_BINARY_PATH'),
-            'yamdi' => '',
-            'qtfaststart' => '',
-        ), true);
-
-        // Slice down the media if it has a listed start / duration
-        if($media->duration > 0)
+        // If the file doesn't exist, download it
+        if(file_exists($temp_media_path))
         {
-            // Extract the section we care about
-            $start = new \PHPVideoToolkit\Timecode($media->start);
-            $end = new \PHPVideoToolkit\Timecode($media->start + $media->duration);
-
-            // Process differently based on the file type
-            switch($file_type)
-            {
-                case 'mp3':
-                case 'wav':
-                    $audio  = new \PHPVideoToolkit\Audio($temp_media_path, null, null, false);
-                    $command = $audio->extractSegment($start, $end);
-                    break;
-                case 'mp4':
-                    $video  = new \PHPVideoToolkit\Video($temp_media_path, null, null, false);
-                    $command = $video->extractSegment($start, $end);
-                    break;
-            }
-            // We need to save as a separate file then overwrite
-            $trimmed_media_path = $temp_media_path."trimmed.".$file_type;
-            $process = $command->save($trimmed_media_path, null, true);
-            rename($trimmed_media_path, $temp_media_path);
-        }
-
-        // Chunk the media file into smaller pieces based on env settings
-
-        // Calculate the number of chunks needed
-        $parser = new \PHPVideoToolkit\MediaParser();
-        $media_data = $parser->getFileInformation($temp_media_path);
-        $slice_duration = env('FPRINT_CHUNK_LENGTH');
-        $duration = $media_data['duration']->total_seconds;
-
-        // Perform the actual slicing
-        if($duration > env('FPRINT_CHUNK_LENGTH'))
-        {
-            switch($file_type)
-            {
-                case 'mp3':
-                case 'wav':
-                    $audio  = new \PHPVideoToolkit\Audio($temp_media_path, null, null, false);
-                    $slices = $audio->split(env('FPRINT_CHUNK_LENGTH'));
-                    break;
-                case 'mp4':
-                    $video  = new \PHPVideoToolkit\Video($temp_media_path, null, null, false);
-                    $slices = $video->split(env('FPRINT_CHUNK_LENGTH'));
-                    break;
-            }
-            $process = $slices->save($destination_directory.$destination_file_base."_%index.".$file_type);
-            $output = $process->getOutput();
-
-            // Get the filenames
-            foreach($output as $chunk)
-            {
-                $return_files['chunks'][] = basename($chunk->getMediaPath());
-            }
+            $return_files['full'] = $temp_media_file;
         }
         else
         {
-            $copy_path = str_replace(".".$file_type, "_0.".$file_type, $temp_media_path);
-            copy($temp_media_path, $copy_path);
-            $return_files['chunks'][] = basename($copy_path);
+            $temp_media_file = $this->loadFile($source_media_path, $destination_directory, $destination_file_base, $file_type);
+
+            if($temp_media_file == "")
+                throw new \Exception("Could not download the media: ".$source_media_path);
+
+            // Save the media path
+            $return_files['full'] = $temp_media_file;
+
+            // Set up PHPVideoToolkit (for use in the next steps)
+            $config = new \PHPVideoToolkit\Config(array(
+                'temp_directory' => '/tmp',
+                'ffmpeg' => env('FFMPEG_BINARY_PATH'),
+                'ffprobe' => env('FFPROBE_BINARY_PATH'),
+                'yamdi' => '',
+                'qtfaststart' => '',
+            ), true);
+
+            // Slice down the new media file if it has a listed start / duration
+            if($media->duration > 0)
+            {
+                // Extract the section we care about
+                $start = new \PHPVideoToolkit\Timecode($media->start);
+                $end = new \PHPVideoToolkit\Timecode($media->start + $media->duration);
+
+                // Process differently based on the file type
+                switch($file_type)
+                {
+                    case 'mp3':
+                    case 'wav':
+                        $audio  = new \PHPVideoToolkit\Audio($temp_media_path, null, null, false);
+                        $command = $audio->extractSegment($start, $end);
+                        break;
+                    case 'mp4':
+                        $video  = new \PHPVideoToolkit\Video($temp_media_path, null, null, false);
+                        $command = $video->extractSegment($start, $end);
+                        break;
+                }
+                // We need to save as a separate file then overwrite
+                $trimmed_media_path = $temp_media_path."trimmed.".$file_type;
+                $process = $command->save($trimmed_media_path, null, true);
+                rename($trimmed_media_path, $temp_media_path);
+            }
         }
 
+        // Check if the file parts already exist
+        $chunk_glob_path = $destination_directory.$destination_file_base."_*.".$file_type;
+        $chunk_paths = glob($chunk_glob_path);
+
+        // If the chunks already exist use them, otherwise make them.
+        if(sizeof($chunk_paths) > 0)
+        {
+            foreach($chunk_paths as $chunk_path)
+                $return_files['chunks'][] = basename($chunk_path);
+        }
+        else
+        {
+
+            // Calculate the number of chunks needed
+            $parser = new \PHPVideoToolkit\MediaParser();
+            $media_data = $parser->getFileInformation($temp_media_path);
+            $slice_duration = env('FPRINT_CHUNK_LENGTH');
+            $duration = $media_data['duration']->total_seconds;
+
+            // Perform the actual slicing
+            if($duration > env('FPRINT_CHUNK_LENGTH'))
+            {
+                switch($file_type)
+                {
+                    case 'mp3':
+                    case 'wav':
+                        $audio  = new \PHPVideoToolkit\Audio($temp_media_path, null, null, false);
+                        $slices = $audio->split(env('FPRINT_CHUNK_LENGTH'));
+                        break;
+                    case 'mp4':
+                        $video  = new \PHPVideoToolkit\Video($temp_media_path, null, null, false);
+                        $slices = $video->split(env('FPRINT_CHUNK_LENGTH'));
+                        break;
+                }
+                $process = $slices->save($destination_directory.$destination_file_base."_%index.".$file_type);
+                $output = $process->getOutput();
+
+                // Get the filenames
+                foreach($output as $chunk)
+                {
+                    $return_files['chunks'][] = basename($chunk->getMediaPath());
+                }
+            }
+            else
+            {
+                $copy_path = str_replace(".".$file_type, "_0.".$file_type, $temp_media_path);
+                copy($temp_media_path, $copy_path);
+                $return_files['chunks'][] = basename($copy_path);
+            }
+        }
         return $return_files;
     }
-
 
     /**
      * Loads a file into a specified directory, returns the file name that was created
