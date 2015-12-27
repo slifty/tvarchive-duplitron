@@ -278,7 +278,7 @@ class AudfDockerFingerprinter implements FingerprinterContract
         }
         else
         {
-            throw \Exception("Couldn't obtain a lock for ".$database_path);
+            throw new \Exception("Couldn't obtain a lock for ".$database_path);
         }
 
         // Close the file
@@ -522,7 +522,7 @@ class AudfDockerFingerprinter implements FingerprinterContract
         }
         else
         {
-            throw \Exception("Couldn't obtain a lock for ".$database_path);
+            throw new \Exception("Couldn't obtain a lock for ".$database_path);
         }
 
         // Close the file
@@ -720,7 +720,7 @@ class AudfDockerFingerprinter implements FingerprinterContract
             }
             else
             {
-                throw \Exception("Couldn't obtain a lock for ".$database);
+                throw new \Exception("Couldn't obtain a lock for ".$database);
             }
 
             // Close the file

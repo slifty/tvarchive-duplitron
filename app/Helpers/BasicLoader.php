@@ -147,7 +147,7 @@ class BasicLoader implements LoaderContract
         $temp_media_path = $destination_directory.$temp_media_file;
 
         if($temp_media_file == "")
-            throw new Exception("Could not download the media");
+            throw new \Exception("Could not download the media");
 
         // Save the media path
         $return_files['full'] = $temp_media_file;
