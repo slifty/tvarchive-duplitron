@@ -14,6 +14,10 @@ class BasicLoader implements LoaderContract
     {
         // TODO: do a better job of checking if the fingerprints exist already
 
+        // Check to be sure there is even a path to load
+        if(!$media->afpt_path)
+            return null;
+
         // Set up the basics
         $return_files = array(
             'full' => '',
