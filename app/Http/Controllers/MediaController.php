@@ -80,8 +80,9 @@ class MediaController extends Controller
         {
             $base_media = Media::find($request->input('base_media_id'));
             $media->base_media_id = $base_media->id;
+
+            // We copy the base media from the parent, but NOT the fingerprints
             $media->media_path = $base_media->media_path;
-            $media->afpt_path = $base_media->afpt_path;
             $media->external_id = $base_media->external_id;
         }
         else
