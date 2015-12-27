@@ -855,8 +855,16 @@ class AudfDockerFingerprinter implements FingerprinterContract
         });
 
         // Clean up after yourself, it's only polite
-        $manager->stop($container);
-        $manager->remove($container, false, true);
+        try
+        {
+            $manager->stop($container);
+            $manager->remove($container, false, true);
+        }
+        catch(\Exception $e)
+        {
+            // Apparently sometimes containers don't remove, but we don't want to error when that happens.
+            // TODO: figure out why container removal fails on occasion
+        }
 
         return $logs;
     }
