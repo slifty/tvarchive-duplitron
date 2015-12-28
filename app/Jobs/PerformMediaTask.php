@@ -142,7 +142,6 @@ class PerformMediaTask extends Job implements SelfHandling, ShouldQueue
 
         // Mark this as finished
         $this->task->save();
-        $this->delete();
     }
 
     // TODO: lol
@@ -165,9 +164,6 @@ class PerformMediaTask extends Job implements SelfHandling, ShouldQueue
         // Called when the job is failing...
         $this->task->status_code = Task::STATUS_FAILED;
         $this->task->save();
-
-        // Remove this from the queue
-        $this->delete();
     }
 
 }
