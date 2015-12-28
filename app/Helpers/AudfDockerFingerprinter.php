@@ -37,19 +37,21 @@ class AudfDockerFingerprinter implements FingerprinterContract
      */
     public function runMatch($media)
     {
-        $afpt_files = $this->prepareMedia($media);
-        $afpt_file = $afpt_files['full']; // We use the full file for matching
-        $project = $media->project;
-
         $task_logs = [];
         $corpus_results = [];
         $potential_targets_results = [];
         $distractors_results = [];
         $targets_results = [];
 
+        $task_logs[] = $this->logLine("Starting");
+        $task_logs[] = $this->logLine("Start: Prepare media");
+        $afpt_files = $this->prepareMedia($media);
+        $afpt_file = $afpt_files['full']; // We use the full file for matching
+        $project = $media->project;
+        $task_logs[] = $this->logLine("End:   Prepare media");
+
         /////
         // Find all matches with stored items
-        $task_logs[] = $this->logLine("Starting");
 
         // Find matches with corpus items
         $task_logs[] = $this->logLine("Start: Corpus multimatch");
@@ -245,9 +247,13 @@ class AudfDockerFingerprinter implements FingerprinterContract
      */
     private function addDatabaseItem($media, $match_type)
     {
+        $task_logs = array();
+
+        $task_logs[] = $this->logLine("Starting");
+        $task_logs[] = $this->logLine("Start: Prepare media");
         $afpt_files = $this->prepareMedia($media);
         $project = $media->project;
-        $task_logs = array();
+        $task_logs[] = $this->logLine("End:   Prepare media");
 
         $database_path = $this->getCurrentDatabase($match_type, $project);
 
@@ -510,28 +516,38 @@ class AudfDockerFingerprinter implements FingerprinterContract
      */
     private function removeDatabaseItem($media, $database_path)
     {
+        $task_logs = array();
+
         // Get the fingerprints
+        $task_logs[] = $this->logLine("Starting");
+        $task_logs[] = $this->logLine("Start: Prepare media");
         $afpt_files = $this->prepareMedia($media);
+        $task_logs[] = $this->logLine("End:   Prepare media");
 
         // Does the database still exist?
         // Obtain a file lock
+        $task_logs[] = $this->logLine("Start: Obtaining file lock for ".$database_path);
         $lockfile = $this->touchFlockFile($database_path);
         if(flock($lockfile, LOCK_EX))
         {
+            $task_logs[] = $this->logLine("End:   Obtaining file lock for ".$database_path);
             // Now that we're locked, make sure the path hasn't moved
             $database_path = $this->resolveDatabasePath($database_path);
 
             if($this->getDatabaseStatus($database_path) == AudfDockerFingerprinter::DATABASE_STATUS_MISSING)
-                $logs = array("The database this was stored in no longer existed.");
+                $task_logs[] = "The database this was stored in no longer existed.";
             else
             {
 
                 // Delete each chunk
                 foreach($afpt_files['chunks'] as $afpt_file)
                 {
+
+                    $task_logs[] = $this->logLine("Start: Removing ".$afpt_file);
                     $audf_command = 'remove';
                     $cmd = [$audf_command, '-d', AudfDockerFingerprinter::AUDFPRINT_DOCKER_PATH.$database_path, AudfDockerFingerprinter::AUDFPRINT_DOCKER_PATH.'afpt_cache/'.$afpt_file];
-                    $logs = $this->runDocker($cmd);
+                    $task_logs = array_merge($task_logs, $this->runDocker($cmd));
+                    $task_logs[] = $this->logLine("End:   Removing ".$afpt_file);
                 }
             }
 
@@ -854,8 +870,14 @@ class AudfDockerFingerprinter implements FingerprinterContract
      */
     private function runDocker($cmd) {
 
+        // Set up a guzzle connection with proper configuration
+        // TODO: move timeouts to env setting
+        $docker_client = \Docker\Http\DockerClient::createWithEnv();
+        $docker_client->setDefaultOption('timeout', 3600);
+        $docker_client->setDefaultOption('connect_timeout', 3600);
+
         // Create a connection with docker
-        $docker = new \Docker\Docker(\Docker\Http\DockerClient::createWithEnv());
+        $docker = new \Docker\Docker($docker_client);
 
         // Create the docker container
         $container = new \Docker\Container(
