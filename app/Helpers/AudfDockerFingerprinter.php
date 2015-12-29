@@ -252,58 +252,47 @@ class AudfDockerFingerprinter implements FingerprinterContract
         $task_logs[] = $this->logLine("Starting");
         $task_logs[] = $this->logLine("Start: Prepare media");
         $afpt_files = $this->prepareMedia($media);
-        $project = $media->project;
         $task_logs[] = $this->logLine("End:   Prepare media");
 
-        $database_path = $this->getCurrentDatabase($match_type, $project);
+        // Get current database locks and returns a valid database for us to write to
+        $task_logs[] = $this->logLine("Start: Identify and lock target database");
+        $database_object = $this->getCurrentDatabase($match_type, $media);
+        $database_path = $database_object['path'];
+        $lockfile = $database_object['lockfile'];
+        $task_logs[] = $this->logLine("End:   Identify and lock target database");
 
-        // The file may be in parts, add each part individually
-        // TODO: consider adding drop check to individual parts
-        // (for now we will always have all parts added to the same database)
+        // Now that we're locked, make sure the path hasn't moved
+        $database_path = $this->resolveDatabasePath($database_path);
 
-        // Obtain a file lock
-        $task_logs[] = $this->logLine("Start: Obtaining file lock for ".$database_path);
-        $lockfile = $this->touchFlockFile($database_path);
-        if(flock($lockfile, LOCK_EX))
-        {
-            $task_logs[] = $this->logLine("End:   Obtaining file lock for ".$database_path);
-            // Now that we're locked, make sure the path hasn't moved
-            $database_path = $this->resolveDatabasePath($database_path);
-
-            // Are we making someting new or not
-            if($this->getDatabaseStatus($database_path) == AudfDockerFingerprinter::DATABASE_STATUS_MISSING)
-                $audf_command = 'new';
-            else
-                $audf_command = 'add';
-
-            // Add the corpus items
-            $task_logs[] = $this->logLine("Start: Storing fingerprints");
-            foreach($afpt_files['chunks'] as $afpt_file) {
-
-                $cmd = [$audf_command, '-d', AudfDockerFingerprinter::AUDFPRINT_DOCKER_PATH.$database_path, '--maxtime', '262144', '--density', '20', AudfDockerFingerprinter::AUDFPRINT_DOCKER_PATH.'afpt_cache/'.$afpt_file];
-
-                // It is possible we just created a database, so the next clip would need to be added rather than overwritten.
-                $audf_command = 'add';
-
-                // Append the logs
-                $task_logs = array_merge($task_logs, $this->runDocker($cmd));
-            }
-            $task_logs[] = $this->logLine("End:   Storing fingerprints");
-
-            // Did we fill the database?
-            $drop_count = $this->getDropCount($task_logs);
-            if($drop_count > 0)
-            {
-                $this->retireDatabase($database_path);
-            }
-
-            // Release the lock
-            flock($lockfile, LOCK_UN);
-        }
+        // Are we making someting new or not
+        if($this->getDatabaseStatus($database_path) == AudfDockerFingerprinter::DATABASE_STATUS_MISSING)
+            $audf_command = 'new';
         else
-        {
-            throw new \Exception("Couldn't obtain a lock for ".$database_path);
+            $audf_command = 'add';
+
+        // Add the corpus items
+        foreach($afpt_files['chunks'] as $afpt_file) {
+
+            $task_logs[] = $this->logLine("Start: Storing fingerprints for ".$afpt_file);
+            $cmd = [$audf_command, '-d', AudfDockerFingerprinter::AUDFPRINT_DOCKER_PATH.$database_path, '--maxtime', '262144', '--density', '20', AudfDockerFingerprinter::AUDFPRINT_DOCKER_PATH.'afpt_cache/'.$afpt_file];
+
+            // It is possible we just created a database, so the next clip would need to be added rather than overwritten.
+            $audf_command = 'add';
+
+            // Append the logs
+            $task_logs = array_merge($task_logs, $this->runDocker($cmd));
+            $task_logs[] = $this->logLine("End:   Storing fingerprints for ".$afpt_file);
         }
+
+        // Did we fill the database?
+        $drop_count = $this->getDropCount($task_logs);
+        if($drop_count > 0)
+        {
+            $this->retireDatabase($database_path);
+        }
+
+        // Release the lock
+        flock($lockfile, LOCK_UN);
 
         // Close the file
         fclose($lockfile);
@@ -568,10 +557,10 @@ class AudfDockerFingerprinter implements FingerprinterContract
     /**
      * Given a match type and media file, return the name of the next database to use
      * @param  string $match_type the match type being used
-     * @param  object $project     the project being used
-     * @return string            the name of the fingerprint database being used
+     * @param  object $media      the media being used
+     * @return string             the name of the fingerprint database being used
      */
-    private function getCurrentDatabase($match_type, $project) {
+    private function getCurrentDatabase($match_type, $media) {
 
         // Make sure this is a valid match type
         $valid_types = [
@@ -585,6 +574,9 @@ class AudfDockerFingerprinter implements FingerprinterContract
             return;
         }
 
+        // Load the project
+        $project = $media->project;
+
         // Make the cache for this type of match if it doesn't exist
         $cache_path = 'pklz_cache/'.$project->id.'/'.$match_type;
         if(!is_dir(env('FPRINT_STORE').$cache_path))
@@ -596,13 +588,13 @@ class AudfDockerFingerprinter implements FingerprinterContract
             chmod(env('FPRINT_STORE').$cache_path, 0777);
         }
 
-        // Get a list of caches that already exist
+        // Get a list of databases that already exist
         $databases = scandir(env('FPRINT_STORE').$cache_path);
 
         // Get the most recent database from the list
         $current_database = array_pop($databases);
 
-        // Different corpus types have different naming structures algorithms
+        // Get the base name for this media file / corpus type
         switch($match_type)
         {
             // Corpus has a new set of buckets every day
@@ -617,24 +609,69 @@ class AudfDockerFingerprinter implements FingerprinterContract
                 $base = 'project_'.$project->id.'-'.$match_type;
                 break;
         }
-        // If the current database recent and considered good, use it
-        if(strpos($current_database, $base) === false)
-            $bin_number = 0;
-        elseif($this->getDatabaseStatus($cache_path.'/'.$current_database) == AudfDockerFingerprinter::DATABASE_STATUS_GOOD)
-            return $cache_path."/".$current_database;
-        else
+
+        // Get a a list of databases that already exist
+        $database_glob_path = $cache_path.'/'.$base.'*';
+        $database_paths = glob($database_glob_path);
+
+        // Separate out the bin numbers
+        $empty_bins = array();
+        $full_bins = array();
+        foreach($database_paths as $database_path)
         {
-            // The current database is recent but filled, increment the bin number accordingly
-            preg_match('/.*\-(\d+)(\-full)\.pklz/', $current_database, $matches);
+            $database = basename($database_path);
+            preg_match('/.*\-(\d+)(\-full)\.pklz/', $database, $matches);
 
             if(sizeof($matches) == 0)
-                $bin_number = 0;
+                continue;
+
+            $bin_number = $matches[1];
+            if(strpos($database, '-full') === false)
+                $empty_bins[] = (int)$bin_number;
             else
-                $bin_number = $matches[1] + 1;
+                $full_bins[] = (int)$bin_number;
         }
 
-        // We have a winner!
-        return $cache_path.'/'.$base."-".$bin_number.".pklz";
+        // Make sure the last element is the highest bin number
+        sort($empty_bins);
+        sort($full_bins);
+
+        // Set up our return value
+        $database_object = array(
+            'path' => '',
+            'lockfile' => null
+        );
+
+        // Try to lock an empty bin
+        foreach($empty_bins as $empty_bin)
+        {
+            // Nail down the bins
+            $database_path = $cache_path.'/'.$base."-".$empty_bin.".pklz";;
+            $lockfile = $this->touchFlockFile($database_path);
+
+            // Take the first bin we can lock
+            if(flock($lockfile, LOCK_EX | LOCK_NB, $wouldblock) || !$wouldblock)
+            {
+                $database_object['path'] = $database_path;
+                $database_object['lockfile'] = $lockfile;
+                return $database_object;
+            }
+        }
+
+        // If we're here we couldn't lock an empty bin and need to create a new one
+        $next_bin = max(array_pop($empty_bins), array_pop($full_bins));
+
+        // Keep looping until we can get a lock
+        do
+        {
+            $next_bin += 1; // Note: the start value of next bin is actually the most recent ACTIVE bin, we want new ones
+            $database_path = $cache_path.'/'.$base."-".$next_bin.".pklz";
+            $lockfile = $this->touchFlockFile($database_path);
+        } while(!flock($lockfile, LOCK_EX | LOCK_NB, $wouldblock) && $wouldblock);
+
+        $database_object['path'] = $database_path;
+        $database_object['lockfile'] = $lockfile;
+        return $database_object;
     }
 
 
