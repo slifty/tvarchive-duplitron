@@ -3,7 +3,7 @@
 namespace Duplitron\Providers;
 
 use Illuminate\Support\ServiceProvider;
-use Duplitron\Helpers\AudfDockerFingerprinter;
+use Duplitron\Helpers\AudfprintFingerprinter;
 
 class FingerprinterServiceProvider extends ServiceProvider
 {
@@ -28,7 +28,7 @@ class FingerprinterServiceProvider extends ServiceProvider
     public function register()
     {
         $this->app->bind('Duplitron\Helpers\Contracts\FingerprinterContract', function(){
-            return new AudfDockerFingerprinter($this->app['Duplitron\Helpers\Contracts\LoaderContract']);
+            return new AudfprintFingerprinter($this->app['Duplitron\Helpers\Contracts\LoaderContract']);
         });
     }
 

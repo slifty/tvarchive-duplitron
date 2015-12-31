@@ -8,7 +8,7 @@ use Duplitron\Helpers\Contracts\LoaderContract;
 use Duplitron\Media;
 use Duplitron\Match;
 
-class AudfDockerFingerprinter implements FingerprinterContract
+class AudfprintFingerprinter implements FingerprinterContract
 {
 
     const AUDFPRINT_DOCKER_PATH = '/var/audfprint/';
@@ -55,49 +55,49 @@ class AudfDockerFingerprinter implements FingerprinterContract
 
         // Find matches with corpus items
         $task_logs[] = $this->logLine("Start: Corpus multimatch");
-        $databases = $this->getDatabases(AudfDockerFingerprinter::MATCH_CORPUS, $project);
+        $databases = $this->getDatabases(AudfprintFingerprinter::MATCH_CORPUS, $project);
         $results = $this->multiMatch($media, $databases);
         $task_logs = array_merge($task_logs, $results['logs']);
         $corpus_results = $results['results'];
         array_walk($corpus_results, function(&$result)
         {
-            $result['type'] = AudfDockerFingerprinter::MATCH_CORPUS;
+            $result['type'] = AudfprintFingerprinter::MATCH_CORPUS;
         });
         $task_logs[] = $this->logLine("End:   Corpus multimatch");
 
         // Find matches with potential target items
         $task_logs[] = $this->logLine("Start: Potential target multimatch");
-        $databases = $this->getDatabases(AudfDockerFingerprinter::MATCH_POTENTIAL_TARGET, $project);
+        $databases = $this->getDatabases(AudfprintFingerprinter::MATCH_POTENTIAL_TARGET, $project);
         $results = $this->multiMatch($media, $databases);
         $task_logs = array_merge($task_logs, $results['logs']);
         $potential_targets_results = $results['results'];
         array_walk($potential_targets_results, function(&$result)
         {
-            $result['type'] = AudfDockerFingerprinter::MATCH_POTENTIAL_TARGET;
+            $result['type'] = AudfprintFingerprinter::MATCH_POTENTIAL_TARGET;
         });
         $task_logs[] = $this->logLine("End:   Corpus multimatch");
 
         // Find matches with distractor items
         $task_logs[] = $this->logLine("Start: Distractor multimatch");
-        $databases = $this->getDatabases(AudfDockerFingerprinter::MATCH_DISTRACTOR, $project);
+        $databases = $this->getDatabases(AudfprintFingerprinter::MATCH_DISTRACTOR, $project);
         $results = $this->multiMatch($media, $databases);
         $task_logs = array_merge($task_logs, $results['logs']);
         $distractors_results = $results['results'];
         array_walk($distractors_results, function(&$result)
         {
-            $result['type'] = AudfDockerFingerprinter::MATCH_DISTRACTOR;
+            $result['type'] = AudfprintFingerprinter::MATCH_DISTRACTOR;
         });
         $task_logs[] = $this->logLine("End:   Corpus multimatch");
 
         // Find matches with target items
         $task_logs[] = $this->logLine("Start: Target multimatch");
-        $databases = $this->getDatabases(AudfDockerFingerprinter::MATCH_TARGET, $project);
+        $databases = $this->getDatabases(AudfprintFingerprinter::MATCH_TARGET, $project);
         $results = $this->multiMatch($media, $databases);
         $task_logs = array_merge($task_logs, $results['logs']);
         $targets_results = $results['results'];
         array_walk($targets_results, function(&$result)
         {
-            $result['type'] = AudfDockerFingerprinter::MATCH_TARGET;
+            $result['type'] = AudfprintFingerprinter::MATCH_TARGET;
         });
         $task_logs[] = $this->logLine("End:   Target multimatch");
 
@@ -192,18 +192,18 @@ class AudfDockerFingerprinter implements FingerprinterContract
                 $end = max($end, $match['start'] + $match['duration']);
 
                 // Resolve types (combine and pick the dominant type)
-                if($match['type'] == AudfDockerFingerprinter::MATCH_DISTRACTOR ||
-                    $type == AudfDockerFingerprinter::MATCH_DISTRACTOR)
-                    $type = AudfDockerFingerprinter::MATCH_DISTRACTOR;
-                else if($match['type'] == AudfDockerFingerprinter::MATCH_TARGET ||
-                    $type == AudfDockerFingerprinter::MATCH_TARGET)
-                    $type = AudfDockerFingerprinter::MATCH_TARGET;
-                else if($match['type'] == AudfDockerFingerprinter::MATCH_POTENTIAL_TARGET ||
-                    $type == AudfDockerFingerprinter::MATCH_POTENTIAL_TARGET)
-                    $type = AudfDockerFingerprinter::MATCH_POTENTIAL_TARGET;
-                else if($match['type'] == AudfDockerFingerprinter::MATCH_CORPUS ||
-                    $type == AudfDockerFingerprinter::MATCH_CORPUS)
-                    $type = AudfDockerFingerprinter::MATCH_CORPUS;
+                if($match['type'] == AudfprintFingerprinter::MATCH_DISTRACTOR ||
+                    $type == AudfprintFingerprinter::MATCH_DISTRACTOR)
+                    $type = AudfprintFingerprinter::MATCH_DISTRACTOR;
+                else if($match['type'] == AudfprintFingerprinter::MATCH_TARGET ||
+                    $type == AudfprintFingerprinter::MATCH_TARGET)
+                    $type = AudfprintFingerprinter::MATCH_TARGET;
+                else if($match['type'] == AudfprintFingerprinter::MATCH_POTENTIAL_TARGET ||
+                    $type == AudfprintFingerprinter::MATCH_POTENTIAL_TARGET)
+                    $type = AudfprintFingerprinter::MATCH_POTENTIAL_TARGET;
+                else if($match['type'] == AudfprintFingerprinter::MATCH_CORPUS ||
+                    $type == AudfprintFingerprinter::MATCH_CORPUS)
+                    $type = AudfprintFingerprinter::MATCH_CORPUS;
             }
 
             if($next_match == null || $next_match['start'] > $end) {
@@ -265,7 +265,7 @@ class AudfDockerFingerprinter implements FingerprinterContract
         $database_path = $this->resolveDatabasePath($database_path);
 
         // Are we making someting new or not
-        if($this->getDatabaseStatus($database_path) == AudfDockerFingerprinter::DATABASE_STATUS_MISSING)
+        if($this->getDatabaseStatus($database_path) == AudfprintFingerprinter::DATABASE_STATUS_MISSING)
             $audf_command = 'new';
         else
             $audf_command = 'add';
@@ -274,13 +274,13 @@ class AudfDockerFingerprinter implements FingerprinterContract
         foreach($afpt_files['chunks'] as $afpt_file) {
 
             $task_logs[] = $this->logLine("Start: Storing fingerprints for ".$afpt_file);
-            $cmd = [$audf_command, '-d', AudfDockerFingerprinter::AUDFPRINT_DOCKER_PATH.$database_path, '--maxtime', '262144', '--density', '20', AudfDockerFingerprinter::AUDFPRINT_DOCKER_PATH.'afpt_cache/'.$afpt_file];
+            $cmd = [$audf_command, '-d', $this->resolveCachePath($database_path), '--maxtime', '262144', '--density', '20', $this->resolveCachePath('afpt_cache/'.$afpt_file)];
 
             // It is possible we just created a database, so the next clip would need to be added rather than overwritten.
             $audf_command = 'add';
 
             // Append the logs
-            $task_logs = array_merge($task_logs, $this->runDocker($cmd));
+            $task_logs = array_merge($task_logs, $this->runAudfprint($cmd));
             $task_logs[] = $this->logLine("End:   Storing fingerprints for ".$afpt_file);
         }
 
@@ -315,7 +315,7 @@ class AudfDockerFingerprinter implements FingerprinterContract
             throw new \Exception("This is already a corpus item");
 
         // Run the database insertion
-        $result = $this->addDatabaseItem($media, AudfDockerFingerprinter::MATCH_CORPUS);
+        $result = $this->addDatabaseItem($media, AudfprintFingerprinter::MATCH_CORPUS);
 
         // Save the result
         $media->is_corpus = true;
@@ -336,7 +336,7 @@ class AudfDockerFingerprinter implements FingerprinterContract
             throw new \Exception("This is already a distractor");
 
         // Run the database insertion
-        $result = $this->addDatabaseItem($media, AudfDockerFingerprinter::MATCH_DISTRACTOR);
+        $result = $this->addDatabaseItem($media, AudfprintFingerprinter::MATCH_DISTRACTOR);
 
         // Save the result
         $media->is_distractor = true;
@@ -357,7 +357,7 @@ class AudfDockerFingerprinter implements FingerprinterContract
             throw new \Exception("This is already a potential target");
 
         // Run the database insertion
-        $result = $this->addDatabaseItem($media, AudfDockerFingerprinter::MATCH_POTENTIAL_TARGET);
+        $result = $this->addDatabaseItem($media, AudfprintFingerprinter::MATCH_POTENTIAL_TARGET);
 
         // Save the result
         $media->is_potential_target = true;
@@ -378,7 +378,7 @@ class AudfDockerFingerprinter implements FingerprinterContract
             throw new \Exception("This is already a target");
 
         // Run the database insertion
-        $result = $this->addDatabaseItem($media, AudfDockerFingerprinter::MATCH_TARGET);
+        $result = $this->addDatabaseItem($media, AudfprintFingerprinter::MATCH_TARGET);
 
         // Save the result
         $media->is_target = true;
@@ -523,7 +523,7 @@ class AudfDockerFingerprinter implements FingerprinterContract
             // Now that we're locked, make sure the path hasn't moved
             $database_path = $this->resolveDatabasePath($database_path);
 
-            if($this->getDatabaseStatus($database_path) == AudfDockerFingerprinter::DATABASE_STATUS_MISSING)
+            if($this->getDatabaseStatus($database_path) == AudfprintFingerprinter::DATABASE_STATUS_MISSING)
                 $task_logs[] = "The database this was stored in no longer existed.";
             else
             {
@@ -534,8 +534,8 @@ class AudfDockerFingerprinter implements FingerprinterContract
 
                     $task_logs[] = $this->logLine("Start: Removing ".$afpt_file);
                     $audf_command = 'remove';
-                    $cmd = [$audf_command, '-d', AudfDockerFingerprinter::AUDFPRINT_DOCKER_PATH.$database_path, AudfDockerFingerprinter::AUDFPRINT_DOCKER_PATH.'afpt_cache/'.$afpt_file];
-                    $task_logs = array_merge($task_logs, $this->runDocker($cmd));
+                    $cmd = [$audf_command, '-d', $this->resolveCachePath($database_path), $this->resolveCachePath('afpt_cache/'.$afpt_file)];
+                    $task_logs = array_merge($task_logs, $this->runAudfprint($cmd));
                     $task_logs[] = $this->logLine("End:   Removing ".$afpt_file);
                 }
             }
@@ -564,10 +564,10 @@ class AudfDockerFingerprinter implements FingerprinterContract
 
         // Make sure this is a valid match type
         $valid_types = [
-            AudfDockerFingerprinter::MATCH_POTENTIAL_TARGET,
-            AudfDockerFingerprinter::MATCH_CORPUS,
-            AudfDockerFingerprinter::MATCH_DISTRACTOR,
-            AudfDockerFingerprinter::MATCH_TARGET
+            AudfprintFingerprinter::MATCH_POTENTIAL_TARGET,
+            AudfprintFingerprinter::MATCH_CORPUS,
+            AudfprintFingerprinter::MATCH_DISTRACTOR,
+            AudfprintFingerprinter::MATCH_TARGET
         ];
         if(!in_array($match_type, $valid_types))
         {
@@ -598,14 +598,14 @@ class AudfDockerFingerprinter implements FingerprinterContract
         switch($match_type)
         {
             // Corpus has a new set of buckets every day
-            case AudfDockerFingerprinter::MATCH_CORPUS:
+            case AudfprintFingerprinter::MATCH_CORPUS:
                 $base = date('Y_m_d').'-project_'.$project->id.'-'.$match_type;
                 break;
 
             // All others have a single set of buckets
-            case AudfDockerFingerprinter::MATCH_DISTRACTOR:
-            case AudfDockerFingerprinter::MATCH_TARGET:
-            case AudfDockerFingerprinter::MATCH_POTENTIAL_TARGET:
+            case AudfprintFingerprinter::MATCH_DISTRACTOR:
+            case AudfprintFingerprinter::MATCH_TARGET:
+            case AudfprintFingerprinter::MATCH_POTENTIAL_TARGET:
                 $base = 'project_'.$project->id.'-'.$match_type;
                 break;
         }
@@ -713,14 +713,14 @@ class AudfDockerFingerprinter implements FingerprinterContract
     private function getDatabaseStatus($relative_database_path) {
         // Has this been flagged as full?
         if(preg_match('/.*(\-full)\.pklz/', $relative_database_path))
-            return AudfDockerFingerprinter::DATABASE_STATUS_FULL;
+            return AudfprintFingerprinter::DATABASE_STATUS_FULL;
 
         // Does this exist at all?
         if(!file_exists(env('FPRINT_STORE').$relative_database_path ))
-            return AudfDockerFingerprinter::DATABASE_STATUS_MISSING;
+            return AudfprintFingerprinter::DATABASE_STATUS_MISSING;
 
         // Looks good to me!
-        return AudfDockerFingerprinter::DATABASE_STATUS_GOOD;
+        return AudfprintFingerprinter::DATABASE_STATUS_GOOD;
     }
 
     /**
@@ -791,8 +791,8 @@ class AudfDockerFingerprinter implements FingerprinterContract
 
                 // Run the match
                 $logs[] = $this->logLine("Start: Running match in ".$database);
-                $cmd = ['match', '-d', AudfDockerFingerprinter::AUDFPRINT_DOCKER_PATH.$database, '--find-time-range', '-x', '1000', '--match-win', '2', AudfDockerFingerprinter::AUDFPRINT_DOCKER_PATH.'afpt_cache/'.$afpt_file];
-                $match_logs = $this->runDocker($cmd);
+                $cmd = ['match', '-d', $this->resolveCachePath($database), '--find-time-range', '-x', '1000', '--match-win', '2', $this->resolveCachePath('afpt_cache/'.$afpt_file)];
+                $match_logs = $this->runAudfprint($cmd);
                 $logs[] = $this->logLine("End:   Running match in ".$database);
 
                 // Release the lock
@@ -882,8 +882,8 @@ class AudfDockerFingerprinter implements FingerprinterContract
      */
     private function createFingerprint($media_file) {
 
-        $cmd = ['precompute', '--density', '20', AudfDockerFingerprinter::AUDFPRINT_DOCKER_PATH.'media_cache/'.$media_file];
-        $logs = $this->runDocker($cmd);
+        $cmd = ['precompute', '--density', '20', $this->resolveCachePath('media_cache/'.$media_file)];
+        $logs = $this->runAudfprint($cmd);
 
         $parsed_path = pathinfo($media_file);
         $fprint_file = $parsed_path['filename'].".afpt";
@@ -905,51 +905,72 @@ class AudfDockerFingerprinter implements FingerprinterContract
      * Run a docker image
      * @param  string[] $cmd The list of commands to invoke in the docker image
      */
-    private function runDocker($cmd) {
+    private function runAudfprint($cmd) {
 
-        // Set up a guzzle connection with proper configuration
-        // TODO: move timeouts to env setting
-        $docker_client = \Docker\Http\DockerClient::createWithEnv();
-        $docker_client->setDefaultOption('timeout', 3600);
-        $docker_client->setDefaultOption('connect_timeout', 3600);
-
-        // Create a connection with docker
-        $docker = new \Docker\Docker($docker_client);
-
-        // Create the docker container
-        $container = new \Docker\Container(
-            [
-                'Image' => env('DOCKER_FPRINT_IMAGE'),
-                'Cmd' => $cmd,
-                'Volumes' => [
-                    '/var/audfprint' => []
-                ],
-                'HostConfig' => [
-                    'Binds' => [env('FPRINT_STORE').':'.AudfDockerFingerprinter::AUDFPRINT_DOCKER_PATH]
-                ]
-            ]
-        );
-
-        $manager = $docker->getContainerManager();
-        //$manager->create($container);
-
-        // Gather the logs and return them to the caller
+        // Set up the log storage
         $logs = [];
-        $manager->run($container, function($output, $type) use (&$logs) {
-            // TODO: Process output more intelligently...
-            $logs = array_merge($logs,explode("\n", $output));
-        });
 
-        // Clean up after yourself, it's only polite
-        try
+        // Are we using audfprint directly?
+        if(env('AUDFPRINT_PATH') != "")
         {
-            $manager->stop($container);
-            $manager->remove($container, false, true);
+            // Run audfprint directly
+            $command = env('AUDFPRINT_PATH')." ".implode(" ", $cmd);
+            exec($command, $output, $status_code);
+
+            if($return_var != 0)
+            {
+                throw new \Exception("Attempted to run audfprint directly, exited with status code: ".$status_code)
+            }
+
+            // Take the results and use them
+            $logs = array_merge($logs, $output);
         }
-        catch(\Exception $e)
+        else
         {
-            // Apparently sometimes containers don't remove, but we don't want to error when that happens.
-            // TODO: figure out why container removal fails on occasion
+            // We are using docker instead
+
+            // Set up a guzzle connection with proper configuration
+            // TODO: move timeouts to env setting
+            $docker_client = \Docker\Http\DockerClient::createWithEnv();
+            $docker_client->setDefaultOption('timeout', 3600);
+            $docker_client->setDefaultOption('connect_timeout', 3600);
+
+            // Create a connection with docker
+            $docker = new \Docker\Docker($docker_client);
+
+            // Create the docker container
+            $container = new \Docker\Container(
+                [
+                    'Image' => env('DOCKER_FPRINT_IMAGE'),
+                    'Cmd' => $cmd,
+                    'Volumes' => [
+                        '/var/audfprint' => []
+                    ],
+                    'HostConfig' => [
+                        'Binds' => [env('FPRINT_STORE').':'.AudfprintFingerprinter::AUDFPRINT_DOCKER_PATH]
+                    ]
+                ]
+            );
+
+            $manager = $docker->getContainerManager();
+
+            // Gather the logs and return them to the caller
+            $manager->run($container, function($output, $type) use (&$logs) {
+                // TODO: Process output more intelligently...
+                $logs = array_merge($logs,explode("\n", $output));
+            });
+
+            // Clean up after yourself, it's only polite
+            try
+            {
+                $manager->stop($container);
+                $manager->remove($container, false, true);
+            }
+            catch(\Exception $e)
+            {
+                // Apparently sometimes containers don't remove, but we don't want to error when that happens.
+                // TODO: figure out why container removal fails on occasion
+            }
         }
 
         return $logs;
@@ -1074,6 +1095,26 @@ class AudfDockerFingerprinter implements FingerprinterContract
      */
     private function logLine($message) {
         return date('h:i:s')." - ".$message;
+    }
+
+    /**
+     * Takes in a cache path and converts it to the path that audfprint will need
+     * @param  String $path the local path to the file
+     * @return String       the audfprint parameter that will resolve to the file
+     */
+    private function resolveCachePath($path) {
+
+        // If we are using audfprint directly
+        //  we need to provide an absolute path on the fulesystem to the cache
+        if(env('AUDFPRINT_PATH') != "")
+        {
+            // TODO: this probably shouldn't be written in a way that relies on a specific file structure
+            return dirname(dirname(__DIR__))."/storage/audfprint/".$path;
+        }
+
+        // Otherwise we are using docker
+        //  we need to provide the mounted path within docker
+        return AudfprintFingerprinter::AUDFPRINT_DOCKER_PATH.$path;
     }
 }
 ?>
