@@ -22,6 +22,7 @@ class Task extends Model
     const TYPE_DISTRACTOR_REMOVE = 'distractor_remove';
     const TYPE_TARGET_ADD = 'target_add';
     const TYPE_TARGET_REMOVE = 'target_remove';
+    const TYPE_CLEAN = 'clean';
 
     // The following fields are provided out of the box by Eloquent
     // - id

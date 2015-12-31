@@ -41,7 +41,7 @@ class BasicLoader implements LoaderContract
             return null;
 
         // Download the zip file
-        $destination_file_base = "media-".$media->id;
+        $destination_file_base = $this->getFileBase($media);
         $destination_directory = env('FPRINT_STORE').'afpt_cache/';
         $temp_afpt_archive_file = $this->loadFile($source_afpt_path, $destination_directory, $destination_file_base, $file_type);
 
@@ -145,7 +145,7 @@ class BasicLoader implements LoaderContract
         $file_type = (array_key_exists('extension', $parsed_path))?$parsed_path['extension']:"mp3";
 
         // Set up the pieces of the destination file names
-        $destination_file_base = "media-".$media->id;
+        $destination_file_base = $this->getFileBase($media);
         $destination_directory = env('FPRINT_STORE').'media_cache/';
         $temp_media_file = $destination_file_base.".".$file_type;
         $temp_media_path = $destination_directory.$temp_media_file;
@@ -252,6 +252,47 @@ class BasicLoader implements LoaderContract
             }
         }
         return $return_files;
+    }
+
+    /**
+     * See contract for documentation
+     */
+    // TODO: make this thread safe, as well as all the other loader methods.
+    public function removeCachedFiles($media) {
+
+        // Set up the cache directories
+        $media_cache = env('FPRINT_STORE').'media_cache/';
+        $afpt_cache = env('FPRINT_STORE').'afpt_cache/';
+        $file_base = $this->getFileBase($media);
+        $remove_paths = [];
+
+        // Find media files
+        $media_glob_path = $media_cache.$file_base.".*";
+        $remove_paths = array_merge($remove_paths, glob($media_glob_path));
+        $media_chunks_glob_path = $media_cache.$file_base."_*.*";
+        $remove_paths = array_merge($remove_paths, glob($media_chunks_glob_path));
+
+        // Find fingerprint files
+        $media_glob_path = $afpt_cache.$file_base.".afpt";
+        $remove_paths = array_merge($remove_paths, glob($media_glob_path));
+        $media_chunks_glob_path = $afpt_cache.$file_base."_*.afpt";
+        $remove_paths = array_merge($remove_paths, glob($media_chunks_glob_path));
+
+        // Go through the paths and remove them
+        foreach($remove_paths as $remove_path)
+        {
+            unlink($remove_path);
+        }
+        return $remove_paths;
+    }
+
+    /**
+     * Given a media file, returns the basename of the file being used for it's various cached pieces
+     * @param  Object $media the media being saved
+     * @return String        the base filename to be used
+     */
+    private function getFileBase($media) {
+        return "media-".$media->id;
     }
 
     /**

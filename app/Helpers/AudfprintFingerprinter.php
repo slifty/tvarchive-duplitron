@@ -550,7 +550,27 @@ class AudfprintFingerprinter implements FingerprinterContract
 
         // Close the file
         fclose($lockfile);
-        return $logs;
+        return $task_logs;
+    }
+
+
+
+    /**
+     * See contract for documentation
+     */
+    public function cleanUp($media)
+    {
+        $task_logs = array();
+
+        $task_logs[] = $this->logLine("Start: Removing cached files");
+        $results = $this->loader->removeCachedFiles($media);
+        $task_logs[] = $this->logLine("End:   Removing cached files");
+
+        return array(
+            'results' => $results,
+            'output' => $task_logs
+        );
+
     }
 
 

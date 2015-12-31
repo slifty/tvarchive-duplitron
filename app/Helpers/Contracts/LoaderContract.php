@@ -21,4 +21,11 @@ interface LoaderContract
      */
     public function loadMedia($media);
 
+    /**
+     * Takes a media object and removes all local cache files associated with it
+     * @param  object $media the media object being removed
+     * @return array         the list of files that were removed
+     */
+    public function removeCachedFiles($media);
+
 }
