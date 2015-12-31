@@ -87,7 +87,7 @@ class AudfprintFingerprinter implements FingerprinterContract
         {
             $result['type'] = AudfprintFingerprinter::MATCH_DISTRACTOR;
         });
-        $task_logs[] = $this->logLine("End:   Corpus multimatch");
+        $task_logs[] = $this->logLine("End:   Distractor multimatch");
 
         // Find matches with target items
         $task_logs[] = $this->logLine("Start: Target multimatch");

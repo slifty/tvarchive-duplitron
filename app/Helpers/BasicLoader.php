@@ -221,7 +221,9 @@ class BasicLoader implements LoaderContract
             $duration = $media_data['duration']->total_seconds;
 
             // Perform the actual slicing
-            if($duration > env('FPRINT_CHUNK_LENGTH'))
+            // TODO: there is an issue where slices that are too small might cause errors.
+            // We will need to add logic to detect those and merge them into the previous slice
+            if($duration > env('FPRINT_CHUNK_LENGTH') + 60) // The + 60 is to try to prevent slices less than 1 minute...
             {
                 switch($file_type)
                 {
