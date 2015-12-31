@@ -35,7 +35,7 @@ class AudfprintFingerprinter implements FingerprinterContract
     /**
      * See contract for documentation
      */
-    public function runMatch($media)
+    public function runMatch($media, $only_active=false)
     {
         $task_logs = [];
         $corpus_results = [];
@@ -55,7 +55,7 @@ class AudfprintFingerprinter implements FingerprinterContract
 
         // Find matches with corpus items
         $task_logs[] = $this->logLine("Start: Corpus multimatch");
-        $databases = $this->getDatabases(AudfprintFingerprinter::MATCH_CORPUS, $project);
+        $databases = $this->getDatabases(AudfprintFingerprinter::MATCH_CORPUS, $project, $only_active);
         $results = $this->multiMatch($media, $databases);
         $task_logs = array_merge($task_logs, $results['logs']);
         $corpus_results = $results['results'];
@@ -67,7 +67,7 @@ class AudfprintFingerprinter implements FingerprinterContract
 
         // Find matches with potential target items
         $task_logs[] = $this->logLine("Start: Potential target multimatch");
-        $databases = $this->getDatabases(AudfprintFingerprinter::MATCH_POTENTIAL_TARGET, $project);
+        $databases = $this->getDatabases(AudfprintFingerprinter::MATCH_POTENTIAL_TARGET, $project, $only_active);
         $results = $this->multiMatch($media, $databases);
         $task_logs = array_merge($task_logs, $results['logs']);
         $potential_targets_results = $results['results'];
@@ -79,7 +79,7 @@ class AudfprintFingerprinter implements FingerprinterContract
 
         // Find matches with distractor items
         $task_logs[] = $this->logLine("Start: Distractor multimatch");
-        $databases = $this->getDatabases(AudfprintFingerprinter::MATCH_DISTRACTOR, $project);
+        $databases = $this->getDatabases(AudfprintFingerprinter::MATCH_DISTRACTOR, $project, $only_active);
         $results = $this->multiMatch($media, $databases);
         $task_logs = array_merge($task_logs, $results['logs']);
         $distractors_results = $results['results'];
@@ -91,7 +91,7 @@ class AudfprintFingerprinter implements FingerprinterContract
 
         // Find matches with target items
         $task_logs[] = $this->logLine("Start: Target multimatch");
-        $databases = $this->getDatabases(AudfprintFingerprinter::MATCH_TARGET, $project);
+        $databases = $this->getDatabases(AudfprintFingerprinter::MATCH_TARGET, $project, $only_active);
         $results = $this->multiMatch($media, $databases);
         $task_logs = array_merge($task_logs, $results['logs']);
         $targets_results = $results['results'];
@@ -599,7 +599,17 @@ class AudfprintFingerprinter implements FingerprinterContract
         {
             // Corpus has a new set of buckets every day
             case AudfprintFingerprinter::MATCH_CORPUS:
-                $base = date('Y_m_d').'-project_'.$project->id.'-'.$match_type;
+
+                // If the media Id is of a special magic format we can pull a date from it
+                if(preg_match('/[^\_]*\_(\d\d\d\d)(\d\d)(\d\d)_.*/', $media->external_id, $matches))
+                {
+                    $base = $matches[1].'_'.$matches[2].'_'.$matches[3].'-project_'.$project->id.'-'.$match_type;
+                }
+                else
+                {
+                    $base = date('Y_m_d').'-project_'.$project->id.'-'.$match_type;
+                }
+
                 break;
 
             // All others have a single set of buckets
@@ -695,7 +705,34 @@ class AudfprintFingerprinter implements FingerprinterContract
         unset($databases[0]);
         unset($databases[1]);
 
-        // TODO: Filter corpus databases based on time
+        // Filter corpus databases if only_active is true
+        if($only_active)
+        {
+            switch($match_type)
+            {
+                // Corpus only cares about buckets from the past three days
+                // TODO: "3" days should be an env setting
+                case AudfprintFingerprinter::MATCH_CORPUS:
+                    // Register the valid stems
+                    $stems = [];
+                    for($x = 0; $x < 3; ++$x)
+                    {
+                        $stems[] = date('Y_m_d', strtotime(' -'.$x.' day'));
+                    }
+                    $databases = array_filter($databases, function($item) use ($stems){
+                        $stem = substr($item, 0, 10);
+                        if(array_search($stem, $stems) === false)
+                            return false;
+                        return true;
+                    });
+
+                // All others have no concept of "inactive" yet
+                case AudfprintFingerprinter::MATCH_DISTRACTOR:
+                case AudfprintFingerprinter::MATCH_TARGET:
+                case AudfprintFingerprinter::MATCH_POTENTIAL_TARGET:
+                    break;
+            }
+        }
 
         // Prefix the cache path to each item
         foreach ($databases as &$value)

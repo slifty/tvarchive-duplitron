@@ -52,7 +52,14 @@ class PerformMediaTask extends Job implements SelfHandling, ShouldQueue
             switch($this->task->type)
             {
                 case Task::TYPE_MATCH:
-                    $results = $fingerprinter->runMatch($this->task->media);
+                    $results = $fingerprinter->runMatch($this->task->media, true);
+                    $this->task->result_data = json_encode($results['results']);
+                    $this->task->result_output = json_encode($results['output']);
+                    $this->task->save();
+                    break;
+
+                case Task::TYPE_FULL_MATCH: // All files, not just recent ones
+                    $results = $fingerprinter->runMatch($this->task->media, false);
                     $this->task->result_data = json_encode($results['results']);
                     $this->task->result_output = json_encode($results['output']);
                     $this->task->save();
