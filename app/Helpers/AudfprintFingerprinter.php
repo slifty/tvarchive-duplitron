@@ -917,7 +917,7 @@ class AudfprintFingerprinter implements FingerprinterContract
             $command = env('AUDFPRINT_PATH')." ".implode(" ", $cmd);
             exec($command, $output, $status_code);
 
-            if($return_var != 0)
+            if($status_code != 0)
             {
                 throw new \Exception("Attempted to run audfprint directly, exited with status code: ".$status_code);
             }
