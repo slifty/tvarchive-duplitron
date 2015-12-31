@@ -919,7 +919,7 @@ class AudfprintFingerprinter implements FingerprinterContract
 
             if($return_var != 0)
             {
-                throw new \Exception("Attempted to run audfprint directly, exited with status code: ".$status_code)
+                throw new \Exception("Attempted to run audfprint directly, exited with status code: ".$status_code);
             }
 
             // Take the results and use them
