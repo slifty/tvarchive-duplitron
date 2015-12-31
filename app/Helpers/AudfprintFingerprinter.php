@@ -882,11 +882,12 @@ class AudfprintFingerprinter implements FingerprinterContract
      */
     private function createFingerprint($media_file) {
 
-        $cmd = ['precompute', '--density', '20', $this->resolveCachePath('media_cache/'.$media_file)];
-        $logs = $this->runAudfprint($cmd);
-
         $parsed_path = pathinfo($media_file);
         $fprint_file = $parsed_path['filename'].".afpt";
+
+        $cmd = ['precompute', '--density', '20', '--precompdir', '/', '--wavdir', $this->resolveCachePath('media_cache'), $media_file];
+        $logs = $this->runAudfprint($cmd);
+
         $fprint_start_path = env('FPRINT_STORE').'media_cache/'.$fprint_file;
         $fprint_end_path = env('FPRINT_STORE').'afpt_cache/'.$fprint_file;
         if(is_file($fprint_start_path))
@@ -895,7 +896,7 @@ class AudfprintFingerprinter implements FingerprinterContract
             return $fprint_file;
         }
         else
-            throw new \Exception('Could not create a fingerprint: '.$fprint_file);
+            throw new \Exception('Could not create a fingerprint ('.implode(" ", $cmd).'): '.$fprint_file.' - '.json_encode($logs));
 
         return '';
     }
@@ -1109,7 +1110,7 @@ class AudfprintFingerprinter implements FingerprinterContract
         if(env('AUDFPRINT_PATH') != "")
         {
             // TODO: this probably shouldn't be written in a way that relies on a specific file structure
-            return dirname(dirname(__DIR__))."/storage/audfprint/".$path;
+            return env('FPRINT_STORE').$path;
         }
 
         // Otherwise we are using docker
