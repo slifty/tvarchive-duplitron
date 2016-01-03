@@ -258,8 +258,6 @@ class AudfprintFingerprinter implements FingerprinterContract
         $task_logs[] = $this->logLine("Start: Identify and lock target database");
         $database_object = $this->getCurrentDatabase($match_type, $media);
 
-        print_r($database_object);
-        die();
         $database_path = $database_object['path'];
         $lockfile = $database_object['lockfile'];
         $task_logs[] = $this->logLine("End:   Identify and lock target database");
