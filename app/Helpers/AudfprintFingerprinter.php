@@ -257,6 +257,9 @@ class AudfprintFingerprinter implements FingerprinterContract
         // Get current database locks and returns a valid database for us to write to
         $task_logs[] = $this->logLine("Start: Identify and lock target database");
         $database_object = $this->getCurrentDatabase($match_type, $media);
+
+        print_r($database_object);
+        die();
         $database_path = $database_object['path'];
         $lockfile = $database_object['lockfile'];
         $task_logs[] = $this->logLine("End:   Identify and lock target database");
@@ -286,7 +289,9 @@ class AudfprintFingerprinter implements FingerprinterContract
 
         // Did we fill the database?
         $drop_count = $this->getDropCount($task_logs);
-        if($drop_count > 0)
+
+        // According to Dan Ellis, so long as drop count is less than 1% we're in the clear
+        if($drop_count > 1)
         {
             $this->retireDatabase($database_path);
         }
@@ -632,7 +637,7 @@ class AudfprintFingerprinter implements FingerprinterContract
         }
 
         // Get a a list of databases that already exist
-        $database_glob_path = $cache_path.'/'.$base.'*';
+        $database_glob_path = env('FPRINT_STORE').$cache_path.'/'.$base.'*';
         $database_paths = glob($database_glob_path);
 
         // Separate out the bin numbers
@@ -641,7 +646,7 @@ class AudfprintFingerprinter implements FingerprinterContract
         foreach($database_paths as $database_path)
         {
             $database = basename($database_path);
-            preg_match('/.*\-(\d+)(\-full)\.pklz/', $database, $matches);
+            preg_match('/.*\-(\d+)(\-full)?\.pklz/', $database, $matches);
 
             if(sizeof($matches) == 0)
                 continue;
@@ -656,7 +661,6 @@ class AudfprintFingerprinter implements FingerprinterContract
         // Make sure the last element is the highest bin number
         sort($empty_bins);
         sort($full_bins);
-
         // Set up our return value
         $database_object = array(
             'path' => '',
@@ -1088,12 +1092,12 @@ class AudfprintFingerprinter implements FingerprinterContract
         $drop_count = 0;
         foreach($logs as $line)
         {
-            $match_pattern = '/Dropped\shashes\=\s(\d+)/';
+            $match_pattern = '/Dropped\shashes\=\s(\d+)\s\((\d+\.\d+)\%\)/';
 
             // Did we reach a log line that talks about drop count?
             if(preg_match($match_pattern, $line, $match_data))
             {
-                $drop_count = $match_data[1];
+                $drop_count = $match_data[2];
                 break;
             }
         }
