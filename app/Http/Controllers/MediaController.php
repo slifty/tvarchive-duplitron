@@ -182,6 +182,6 @@ class MediaController extends Controller
         if(!$media)
             return [];
 
-        return $media->destinationMatches()->get();
+        return array_merge(json_decode($media->destinationMatches()->get()), json_decode($media->sourceMatches()->get()));
     }
 }

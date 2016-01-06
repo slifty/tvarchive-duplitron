@@ -164,65 +164,10 @@ class AudfprintFingerprinter implements FingerprinterContract
         usort($distractors_results, $start_sort);
         usort($targets_results, $start_sort);
 
-        // Consolidate matches involving the same file
+        // Consolidate matches of the same file + type
+        $segments = $this->formSegments($matches);
 
-        // Map the input file to segments based on the matches
-        // Distractor -> Target -> Potential Target -> Corpus
-        $segments = [];
-        $start = -1;
-        $end = -1;
-        $type = '';
-        $is_new_match = true;
-
-        while($match = array_shift($matches))
-        {
-            $next_match = array_shift($matches);
-
-            if($is_new_match)
-            {
-                // Brand new match
-                $start = $match['start'];
-                $end = $match['start'] + $match['duration'];
-                $type = $match['type'];
-                $is_new_match = false;
-            }
-            else
-            {
-                // Merge overlap
-                $end = max($end, $match['start'] + $match['duration']);
-
-                // Resolve types (combine and pick the dominant type)
-                if($match['type'] == AudfprintFingerprinter::MATCH_DISTRACTOR ||
-                    $type == AudfprintFingerprinter::MATCH_DISTRACTOR)
-                    $type = AudfprintFingerprinter::MATCH_DISTRACTOR;
-                else if($match['type'] == AudfprintFingerprinter::MATCH_TARGET ||
-                    $type == AudfprintFingerprinter::MATCH_TARGET)
-                    $type = AudfprintFingerprinter::MATCH_TARGET;
-                else if($match['type'] == AudfprintFingerprinter::MATCH_POTENTIAL_TARGET ||
-                    $type == AudfprintFingerprinter::MATCH_POTENTIAL_TARGET)
-                    $type = AudfprintFingerprinter::MATCH_POTENTIAL_TARGET;
-                else if($match['type'] == AudfprintFingerprinter::MATCH_CORPUS ||
-                    $type == AudfprintFingerprinter::MATCH_CORPUS)
-                    $type = AudfprintFingerprinter::MATCH_CORPUS;
-            }
-
-            if($next_match == null || $next_match['start'] > $end) {
-                // We're done with this match, SHIP IT
-                $final_match = [
-                    'start' => $start,
-                    'end' => $end,
-                    'type' => $type
-                ];
-
-                array_push($segments, $final_match);
-                $is_new_match = true;
-            }
-
-            // Add the next back to the list
-            array_unshift($matches, $next_match);
-        }
         $task_logs[] = $this->logLine("End:   Resolve Matches");
-
 
         $results = [
             "matches" => [
@@ -239,6 +184,105 @@ class AudfprintFingerprinter implements FingerprinterContract
             'output' => $task_logs
         );
     }
+
+
+    /**
+     * Given a list of matches, it will combine mutual overlapping matches.
+     *
+     * Two clips are mutually overlapping if the overlap is 50% or more of BOTH clip durations.
+     *
+     * @param  [type] $matches [description]
+     * @return [type]          [description]
+     */
+    private function formSegments($matches)
+    {
+
+        // We're going to go through every segment and remove mutual overlaps
+        // First, cluster the matches in terms of destination media
+        $segments = array();
+        while($match = array_shift($matches))
+        {
+            $end = $match['start'] + $match['duration'];
+
+            // Are there no more matches?
+            if(sizeof($matches) == 0)
+                $segments[] = $match;
+
+            // Look at all matches that overlap
+            foreach($matches as $key => $future_match)
+            {
+                // Don't compare with matches that don't overlap
+                if($future_match['start'] >= $end) {
+                    $segments[] = $match;
+                    break;
+                }
+
+                // Calculate the degree of overlap
+                if($future_match['start'] + $future_match['duration'] < $end)
+                {
+                    // The future match entirely contained
+                    $overlap = $future_match['duration'];
+                }
+                else
+                {
+                    // We know the overlap position (since matches are sorted by start time)
+                    $overlap = $end - $future_match['start'];
+                }
+
+                if($overlap / $match['duration'] > .5
+                && $overlap / $future_match['duration'] > .5)
+                {
+                    // We have mutual overlap, pick one to keep and throw away the other
+                    $match_weight = $this->getMatchWeight($match);
+                    $future_match_weight = $this->getMatchWeight($future_match);
+
+                    // keep the match with higher weight
+                    if($match_weight >= $future_match_weight)
+                    {
+                        // toss the future match
+                        unset($matches[$key]);
+                    }
+                    else
+                    {
+                        // toss the current match (by breaking without saving it)
+                        break;
+                    }
+                }
+            }
+        }
+        return $segments;
+    }
+
+    /**
+     * Return a priority (weight) based on the match type.  Higher is more important.  The weight is as follows:
+     * 4: target
+     * 3: distractor
+     * 2: potential target
+     * 1: corpus
+     *
+     * @param  [type] $match [description]
+     * @return [type]        [description]
+     */
+    private function getMatchWeight($match)
+    {
+        switch($match['type'])
+        {
+            case AudfprintFingerprinter::MATCH_TARGET:
+                return 4;
+                break;
+            case AudfprintFingerprinter::MATCH_DISTRACTOR:
+                return 3;
+                break;
+            case AudfprintFingerprinter::MATCH_POTENTIAL_TARGET:
+                return 2;
+                break;
+            case AudfprintFingerprinter::MATCH_CORPUS:
+                return 1;
+                break;
+
+        }
+    }
+
 
     /**
      * Given a media item and match type, add it to the database
@@ -725,7 +769,7 @@ class AudfprintFingerprinter implements FingerprinterContract
         {
             switch($match_type)
             {
-                // Corpus only cares about buckets within 3 days of air date
+                // Corpus only cares about buckets within +/- 1 day of air date
                 // TODO: "3" days should be an env setting
                 case AudfprintFingerprinter::MATCH_CORPUS:
                     // Get the base date for this media
@@ -734,7 +778,7 @@ class AudfprintFingerprinter implements FingerprinterContract
                     // Register the valid stems
                     $stems = [];
                     $stems[] = date('Y_m_d', $base_time);
-                    for($x = 1; $x < 3; ++$x)
+                    for($x = 1; $x <= 1; ++$x)
                     {
                         $stems[] = date('Y_m_d', strtotime(' -'.$x.' day', $base_time));
                         $stems[] = date('Y_m_d', strtotime(' +'.$x.' day', $base_time));
@@ -746,6 +790,7 @@ class AudfprintFingerprinter implements FingerprinterContract
                             return false;
                         return true;
                     });
+                    break;
 
                 // All others have no concept of "inactive" yet
                 case AudfprintFingerprinter::MATCH_DISTRACTOR:
@@ -798,7 +843,6 @@ class AudfprintFingerprinter implements FingerprinterContract
 
         return $relative_database_path;
     }
-
 
 
     /**
@@ -867,7 +911,7 @@ class AudfprintFingerprinter implements FingerprinterContract
             $match_results = $this->processAudfMatchLog($match_logs);
 
             // Remove results that point to this particular media file
-            $match_results = $this->removeMatches($media, $match_results);
+            $match_results = $this->cleanMatches($media, $match_results);
 
             $logs = array_merge($logs, $match_logs);
             $results = array_merge($results, $match_results);
@@ -921,8 +965,14 @@ class AudfprintFingerprinter implements FingerprinterContract
                 $parsed_path = pathinfo($chunk_file);
                 $chunk_afpt_file = $parsed_path['filename'].'.afpt';
 
-                if(!is_file($fprint_path_base.$chunk_afpt_file))
-                    $fprint_files['chunks'][] = $this->createFingerprint($chunk_file);
+                if(!is_file($fprint_path_base.$chunk_afpt_file)) {
+                    $chunk_afpt_file = $this->createFingerprint($chunk_file);
+
+                    // There's a chance the fingerprint wasn't created due to a zero sum analysis error
+                    // This is OK, it just means the media file was so tiny we don't care about it
+                    if($chunk_afpt_file !== false)
+                        $fprint_files['chunks'][] = $chunk_afpt_file;
+                }
                 else
                     $fprint_files['chunks'][] = $chunk_afpt_file;
             }
@@ -936,15 +986,19 @@ class AudfprintFingerprinter implements FingerprinterContract
     /**
      * Takes in a media file and creates a fingerprint
      * @param  string $media_file the filename, not the pathname, of a media file in the media cache
-     * @return array              the ['logs'] and resulting fingerprint ['file']
+     * @return string             the resulting fingerprint file, or false on fail
      */
     private function createFingerprint($media_file) {
 
         $parsed_path = pathinfo($media_file);
         $fprint_file = $parsed_path['filename'].".afpt";
 
-        $cmd = ['precompute', '--density', '20', '--precompdir', '/', '--wavdir', $this->resolveCachePath('media_cache'), $media_file];
+        $cmd = ['precompute', '--density', '20', '--precompdir', $this->resolveCachePath('afpt_cache'), '--wavdir', $this->resolveCachePath('media_cache'), $media_file];
         $logs = $this->runAudfprint($cmd);
+
+        // Check for a zero length analysis error, which is the only error we are OK with ignoring
+        if(strpos(implode(" ", $logs), 'Zero length analysis') !== false)
+            return false;
 
         $fprint_start_path = env('FPRINT_STORE').'media_cache/'.$fprint_file;
         $fprint_end_path = env('FPRINT_STORE').'afpt_cache/'.$fprint_file;
@@ -955,8 +1009,6 @@ class AudfprintFingerprinter implements FingerprinterContract
         }
         else
             throw new \Exception('Could not create a fingerprint ('.implode(" ", $cmd).'): '.$fprint_file.' - '.json_encode($logs));
-
-        return '';
     }
 
 
@@ -1085,6 +1137,13 @@ class AudfprintFingerprinter implements FingerprinterContract
         return $matches;
     }
 
+
+    /**
+     * Audfprint will start dropping hashes as the database file gets too big
+     * this method helps extract drop count information for other use
+     * @param  [type] $logs [description]
+     * @return [type]       [description]
+     */
     private function getDropCount($logs)
     {
         $drop_count = 0;
@@ -1105,25 +1164,54 @@ class AudfprintFingerprinter implements FingerprinterContract
 
 
     /**
-     * Removes matches to a specific media file
+     * Removes matches between media files that are the "same" (or similar)
+     * This is handled by media ID, but for specially formatted names it is also handled by external ID
      * @param  object $media   The media file we don't want matches to
      * @param  array  $matches The list of matches
      * @return array           The updated match list
      */
-    private function removeMatches($media, $matches)
+    private function cleanMatches($media, $matches)
     {
         $new_matches = array();
 
+        // Pull out the program name, if possible
+        $program_preg = '/[^\_]*\_\d+\_\d+\_(.*)/';
+        if(preg_match($program_preg, $media->external_id, $preg_matches))
+        {
+            $media_program = $preg_matches[1];
+        }
+        else
+        {
+            $media_program = "";
+        }
+
+        // Go through each match and see if the destination media passes our rules
         foreach($matches as $match)
         {
             // Make sure destination media exists
             if(!$match['destination_media'])
                 continue;
 
-            // We don't want matches to this media file
-            // TODO: consider re-adding prevented matches with base media
-            // || $match['destination_media']->base_media_id == $media->id
+            // We don't want self-matches between the same media file
             if($match['destination_media']->id == $media->id)
+                continue;
+
+            // We don't want self-matches between the media file and its parent / children
+            // NOTE: since canonical items are always separate media, this won't lose any instances
+            if($match['destination_media']->id == $media->base_media_id
+            || $match['destination_media']->base_media_id == $media->id)
+                continue;
+
+            // Try to extract a program name
+            if(preg_match($program_preg, $match['destination_media']['external_id'], $preg_matches))
+            {
+                $match_program = $preg_matches[1];
+            }
+
+            // If we pulled program names, skip the matches between similar program names
+            // Similarity here means there is only a 3 character difference
+            if($media_program != ""
+            && similar_text($match_program, $media_program) > (max(strlen($match_program), strlen($media_program)) - 3))
                 continue;
 
             $new_matches[] = $match;
@@ -1139,9 +1227,9 @@ class AudfprintFingerprinter implements FingerprinterContract
      */
     private function getBaseTime($media) {
         // If the media Id is of a special magic format we can pull a date from it
-        if(preg_match('/[^\_]*\_(\d\d\d\d)(\d\d)(\d\d)_.*/', $media->external_id, $matches))
+        if(preg_match('/[^\_]*\_(\d\d\d\d)(\d\d)(\d\d)_.*/', $media->external_id, $preg_matches))
         {
-            $base = strtotime($matches[2].'/'.$matches[3].'/'.$matches[1]);
+            $base = strtotime($preg_matches[2].'/'.$preg_matches[3].'/'.$preg_matches[1]);
         }
         else
         {

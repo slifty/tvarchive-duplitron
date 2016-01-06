@@ -107,6 +107,16 @@ class BasicLoader implements LoaderContract
                 }
             }
 
+            // Were there any sliced parts?
+            if(sizeof($return_files['chunks']) == 0)
+            {
+                    $chunk_file = $destination_file_base."_0.afpt";
+                    $chunk_file_path = $destination_directory.$chunk_file;
+                    copy($destination_directory.$return_files['full'], $chunk_file_path);
+                    $return_files['chunks'][] = $chunk_file;
+            }
+
+
             // Delete the zip file and the empty unzipped folder
             unlink($detination_afpt_archive_path);
 

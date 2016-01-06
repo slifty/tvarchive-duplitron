@@ -1,9 +1,0 @@
-[program:duplitron-worker]
-process_name=%(program_name)s_%(process_num)02d
-command=php /example/path/to/your/artisan queue:work database --memory=500 --tries=0
-autostart=true
-autorestart=true
-user=exampleuser
-numprocs=8
-redirect_stderr=true
-stdout_logfile=/example/path/to/your/storage/logs/duplitron-worker.log

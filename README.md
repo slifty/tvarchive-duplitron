@@ -74,3 +74,79 @@ To run this code you need:
 // Run ssh -fN -o"ControlPath none" -L 9999:tv-se.archive.org:8983 vm-home1.archive.org
 // so that requests are proxied through
 
+
+
+
+
+## Installing on a fresh copy of ubuntu 14.04...
+
+```shell
+sudo apt-get update
+sudo apt-get -y install git apache2 postgresql php5-common libapache2-mod-php5 php5-cli curl php5-pgsql
+sudo apt-get -y --force-yes install autoconf automake build-essential libass-dev libfreetype6-dev libsdl1.2-dev libtheora-dev libtool libva-dev libvdpau-dev libvorbis-dev libxcb1-dev libxcb-shm0-dev libxcb-xfixes0-dev pkg-config texinfo zlib1g-dev
+sudo apt-get install yasm libx264-dev cmake mercurial libmp3lame-dev libopus-dev
+mkdir ~/ffmpeg_sources
+cd ~/ffmpeg_sources ; hg clone https://bitbucket.org/multicoreware/x265 ; cd ~/ffmpeg_sources/x265/build/linux ; PATH="$HOME/bin:$PATH" cmake -G "Unix Makefiles" -DCMAKE_INSTALL_PREFIX="$HOME/ffmpeg_build" -DENABLE_SHARED:bool=off ../../source ; make ; make install ; make distclean
+cd ~/ffmpeg_sources ; wget -O fdk-aac.tar.gz https://github.com/mstorsjo/fdk-aac/tarball/master ; tar xzvf fdk-aac.tar.gz ; cd mstorsjo-fdk-aac* ; autoreconf -fiv ; ./configure --prefix="$HOME/ffmpeg_build" --disable-shared ; make ; make install ; make distclean
+cd ~/ffmpeg_sources ; wget http://storage.googleapis.com/downloads.webmproject.org/releases/webm/libvpx-1.5.0.tar.bz2 ; tar xjvf libvpx-1.5.0.tar.bz2 ; cd libvpx-1.5.0 ; PATH="$HOME/bin:$PATH" ./configure --prefix="$HOME/ffmpeg_build" --disable-examples --disable-unit-tests ; PATH="$HOME/bin:$PATH" make ; make install ; make clean
+cd ~/ffmpeg_sources ; wget http://ffmpeg.org/releases/ffmpeg-snapshot.tar.bz2 ; tar xjvf ffmpeg-snapshot.tar.bz2 ; cd ffmpeg ; PATH="$HOME/bin:$PATH" PKG_CONFIG_PATH="$HOME/ffmpeg_build/lib/pkgconfig" ./configure  --prefix="$HOME/ffmpeg_build" --pkg-config-flags="--static" --extra-cflags="-I$HOME/ffmpeg_build/include" --extra-ldflags="-L$HOME/ffmpeg_build/lib" --bindir="$HOME/bin" --enable-gpl --enable-libass --enable-libfdk-aac --enable-libfreetype --enable-libmp3lame --enable-libopus --enable-libtheora --enable-libvorbis --enable-libvpx --enable-libx264 --enable-libx265 --enable-nonfree ; PATH="$HOME/bin:$PATH" make ; make install ; make distclean ; hash -r
+sudo cp ~/bin/ffmpeg /usr/local/bin
+sudo cp ~/bin/ffprobe /usr/local/bin
+sudo apt-get install -y frei0r-plugins git python python-scipy python-pip python-matplotlib software-properties-common wget libfreetype6-dev libpng-dev pkg-config python-dev
+sudo pip install -U distribute
+sudo pip install docopt git+git://github.com/bmcfee/librosa.git joblib
+cd /usr/local/src ; sudo wget --no-check-certificate http://www.mega-nerd.com/SRC/libsamplerate-0.1.8.tar.gz ; sudo tar xvfz libsamplerate-0.1.8.tar.gz ; cd libsamplerate-0.1.8 && sudo ./configure && sudo make && sudo make install
+sudo pip install scikits.samplerate
+cd /usr/local/src ; sudo git clone https://github.com/dpwe/audfprint.git
+curl -sS https://getcomposer.org/installer | sudo php -- --install-dir=/usr/local/bin --filename=composer
+cd /var/www ; sudo git clone https://github.com/slifty/tvarchive-fingerprinting.git
+sudo chown -R $(whoami):www-data /var/www/tvarchive-fingerprinting/
+cd /var/www/tvarchive-fingerprinting ; composer install
+printf "<VirtualHost *:80>\n\tDocumentRoot /var/www/tvarchive-fingerprinting/public\n\tErrorLog \${APACHE_LOG_DIR}/error.log\n\tCustomLog \${APACHE_LOG_DIR}/access.log combined\n</VirtualHost>" | sudo tee /etc/apache2/sites-available/tvarchive-fingerprinting.conf
+sudo chown -R $(whoami):www-data /var/www/tvarchive-fingerprinting/
+sudo apt-get install supervisor
+sudo cp /var/www/tvarchive-fingerprinting/fingerprinting-worker.conf.example /etc/supervisor/conf.d
+sudo a2dissite 000-default
+sudo a2ensite tvarchive-fingerprinting
+sudo a2enmod rewrite
+sudo apachectl restart
+sudo -upostgres createdb tvarchive_fingerprinting
+sudo -upostgres createuser tvarchive_fingerprinting -P
+sudo -upostgres psql -c "GRANT ALL PRIVILEGES ON DATABASE tvarchive_fingerprinting to tvarchive_fingerprinting"
+sudo chmod 777 -R /var/www/tvarchive-fingerprinting/storage/audfprint
+sudo chmod 777 -R /var/www/tvarchive-fingerprinting/storage/logs
+
+```
+
+Next you have to update your apache config to `AllowOverride all` in the `/var/www` directory.
+
+```shell
+sudo vi /etc/apache2/apache2.conf
+```
+
+Next you have to set up your .env as appropriate.
+
+```shell
+cp /var/www/tvarchive-fingerprinting/.env.example /var/www/tvarchive-fingerprinting/.env
+php /var/www/tvarchive-fingerprinting/artisan key:generate
+vi /var/www/tvarchive-fingerprinting/.env
+```
+
+Some key values:
+
+```
+AUDFPRINT_PATH=/usr/local/src/audfprint/audfprint.py
+DB_DATABASE=tvarchive_fingerprinting
+DB_USERNAME=tvarchive_fingerprinting
+FFMPEG_BINARY_PATH=/usr/local/bin/ffmpeg
+FFMPEG_BINARY_PATH=/usr/local/bin/ffprobe
+FPRINT_STORE=/var/www/tvarchive-fingerprinting/storage/audfprint/
+```
+
+Now migrate...
+
+```shell
+php /var/www/tvarchive-fingerprinting/artisan migrate:refresh
+```
+
+Finally, set up your supervisor processes
