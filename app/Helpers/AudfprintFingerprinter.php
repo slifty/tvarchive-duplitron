@@ -1000,11 +1000,9 @@ class AudfprintFingerprinter implements FingerprinterContract
         if(strpos(implode(" ", $logs), 'Zero length analysis') !== false)
             return false;
 
-        $fprint_start_path = env('FPRINT_STORE').'media_cache/'.$fprint_file;
-        $fprint_end_path = env('FPRINT_STORE').'afpt_cache/'.$fprint_file;
-        if(is_file($fprint_start_path))
+        $fprint_path = env('FPRINT_STORE').'afpt_cache/'.$fprint_file;
+        if(is_file($fprint_path))
         {
-            rename($fprint_start_path, $fprint_end_path);
             return $fprint_file;
         }
         else
