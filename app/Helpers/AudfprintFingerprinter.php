@@ -319,7 +319,7 @@ class AudfprintFingerprinter implements FingerprinterContract
         foreach($afpt_files['chunks'] as $afpt_file) {
 
             $task_logs[] = $this->logLine("Start: Storing fingerprints for ".$afpt_file);
-            $cmd = [$audf_command, '-d', $this->resolveCachePath($database_path), '--maxtime', '262144', '--density', '100', $this->resolveCachePath('afpt_cache/'.$afpt_file)];
+            $cmd = [$audf_command, '-d', $this->resolveCachePath($database_path), '--maxtime', '262144', '--density', '20', $this->resolveCachePath('afpt_cache/'.$afpt_file)];
 
             // It is possible we just created a database, so the next clip would need to be added rather than overwritten.
             $audf_command = 'add';
@@ -993,7 +993,7 @@ class AudfprintFingerprinter implements FingerprinterContract
         $parsed_path = pathinfo($media_file);
         $fprint_file = $parsed_path['filename'].".afpt";
 
-        $cmd = ['precompute', '--density', '100', '--precompdir', $this->resolveCachePath('afpt_cache'), '--wavdir', $this->resolveCachePath('media_cache'), $media_file];
+        $cmd = ['precompute', '--density', '20', '--precompdir', $this->resolveCachePath('afpt_cache'), '--wavdir', $this->resolveCachePath('media_cache'), $media_file];
         $logs = $this->runAudfprint($cmd);
 
         // Check for a zero length analysis error, which is the only error we are OK with ignoring
