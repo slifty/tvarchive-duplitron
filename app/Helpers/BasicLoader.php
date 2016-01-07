@@ -70,8 +70,14 @@ class BasicLoader implements LoaderContract
             foreach($archive_files as $archive_file)
             {
                 // Skip over '.' and '..'
-                if(substr($archive_file, -4) != 'afpt')
+                // And also skip over files that aren't density 20
+                // TODO: we may want a safer way to pick apart the 20 density from 100 density
+                // TODO: in general we want to handle both 20 and 100
+
+
+                if(substr($archive_file, -11) != '_tva20.afpt')
                     continue;
+
                 if($archive_file[0] == '_')
                 {
                     // This is a chunk file, figure out the index
