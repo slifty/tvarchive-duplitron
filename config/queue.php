@@ -39,14 +39,14 @@ return [
             'driver' => 'database',
             'table' => 'jobs',
             'queue' => 'default',
-            'expire' => 3600,
+            'expire' => 36000,
         ],
 
         'beanstalkd' => [
             'driver' => 'beanstalkd',
             'host'   => 'localhost',
             'queue'  => 'default',
-            'ttr'    => 3600,
+            'ttr'    => 36000,
         ],
 
         'sqs' => [
