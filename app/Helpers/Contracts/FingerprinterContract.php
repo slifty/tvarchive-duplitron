@@ -4,6 +4,11 @@ namespace Duplitron\Helpers\Contracts;
 
 interface FingerprinterContract
 {
+    const MATCH_ALL = 'all';
+    const MATCH_POTENTIAL_TARGET = 'potential_targets';
+    const MATCH_CORPUS = 'corpus';
+    const MATCH_DISTRACTOR = 'distractors';
+    const MATCH_TARGET = 'targets';
 
     /**
      * Run a media file through the matching algorithm, comparing with all four corpuses

@@ -14,10 +14,6 @@ class AudfprintFingerprinter implements FingerprinterContract
     const AUDFPRINT_DOCKER_PATH = '/var/audfprint/';
 
     // TODO: We probably want to create a "matches" model
-    const MATCH_POTENTIAL_TARGET = 'potential_targets';
-    const MATCH_CORPUS = 'corpus';
-    const MATCH_DISTRACTOR = 'distractors';
-    const MATCH_TARGET = 'targets';
 
     // Database statuses
     const DATABASE_STATUS_FULL = 'full';
@@ -35,7 +31,7 @@ class AudfprintFingerprinter implements FingerprinterContract
     /**
      * See contract for documentation
      */
-    public function runMatch($media, $only_active=false)
+    public function runMatch($media, $only_active=false, $match_database = FingerprinterContract::MATCH_ALL)
     {
         $task_logs = [];
         $corpus_results = [];
@@ -54,53 +50,68 @@ class AudfprintFingerprinter implements FingerprinterContract
         // Find all matches with stored items
 
         // Find matches with corpus items
-        $task_logs[] = $this->logLine("Start: Corpus multimatch");
-        $databases = $this->getDatabases(AudfprintFingerprinter::MATCH_CORPUS, $media, $only_active);
-        $results = $this->multiMatch($media, $databases);
-        $task_logs = array_merge($task_logs, $results['logs']);
-        $corpus_results = $results['results'];
-        array_walk($corpus_results, function(&$result)
+        if($match_database == FingerprinterContract::MATCH_ALL
+        || $match_database == FingerprinterContract::MATCH_CORPUS)
         {
-            $result['type'] = AudfprintFingerprinter::MATCH_CORPUS;
-        });
-        $task_logs[] = $this->logLine("End:   Corpus multimatch");
+            $task_logs[] = $this->logLine("Start: Corpus multimatch");
+            $databases = $this->getDatabases(FingerprinterContract::MATCH_CORPUS, $media, $only_active);
+            $results = $this->multiMatch($media, $databases);
+            $task_logs = array_merge($task_logs, $results['logs']);
+            $corpus_results = $results['results'];
+            array_walk($corpus_results, function(&$result)
+            {
+                $result['type'] = FingerprinterContract::MATCH_CORPUS;
+            });
+            $task_logs[] = $this->logLine("End:   Corpus multimatch");
+        }
 
         // Find matches with potential target items
-        $task_logs[] = $this->logLine("Start: Potential target multimatch");
-        $databases = $this->getDatabases(AudfprintFingerprinter::MATCH_POTENTIAL_TARGET, $media, $only_active);
-        $results = $this->multiMatch($media, $databases);
-        $task_logs = array_merge($task_logs, $results['logs']);
-        $potential_targets_results = $results['results'];
-        array_walk($potential_targets_results, function(&$result)
+        if($match_database == FingerprinterContract::MATCH_ALL
+        || $match_database == FingerprinterContract::MATCH_POTENTIAL_TARGET)
         {
-            $result['type'] = AudfprintFingerprinter::MATCH_POTENTIAL_TARGET;
-        });
-        $task_logs[] = $this->logLine("End:   Corpus multimatch");
+            $task_logs[] = $this->logLine("Start: Potential target multimatch");
+            $databases = $this->getDatabases(FingerprinterContract::MATCH_POTENTIAL_TARGET, $media, $only_active);
+            $results = $this->multiMatch($media, $databases);
+            $task_logs = array_merge($task_logs, $results['logs']);
+            $potential_targets_results = $results['results'];
+            array_walk($potential_targets_results, function(&$result)
+            {
+                $result['type'] = FingerprinterContract::MATCH_POTENTIAL_TARGET;
+            });
+            $task_logs[] = $this->logLine("End:   Corpus multimatch");
+        }
 
         // Find matches with distractor items
-        $task_logs[] = $this->logLine("Start: Distractor multimatch");
-        $databases = $this->getDatabases(AudfprintFingerprinter::MATCH_DISTRACTOR, $media, $only_active);
-        $results = $this->multiMatch($media, $databases);
-        $task_logs = array_merge($task_logs, $results['logs']);
-        $distractors_results = $results['results'];
-        array_walk($distractors_results, function(&$result)
+        if($match_database == FingerprinterContract::MATCH_ALL
+        || $match_database == FingerprinterContract::MATCH_DISTRACTOR)
         {
-            $result['type'] = AudfprintFingerprinter::MATCH_DISTRACTOR;
-        });
-        $task_logs[] = $this->logLine("End:   Distractor multimatch");
+            $task_logs[] = $this->logLine("Start: Distractor multimatch");
+            $databases = $this->getDatabases(FingerprinterContract::MATCH_DISTRACTOR, $media, $only_active);
+            $results = $this->multiMatch($media, $databases);
+            $task_logs = array_merge($task_logs, $results['logs']);
+            $distractors_results = $results['results'];
+            array_walk($distractors_results, function(&$result)
+            {
+                $result['type'] = FingerprinterContract::MATCH_DISTRACTOR;
+            });
+            $task_logs[] = $this->logLine("End:   Distractor multimatch");
+        }
 
         // Find matches with target items
-        $task_logs[] = $this->logLine("Start: Target multimatch");
-        $databases = $this->getDatabases(AudfprintFingerprinter::MATCH_TARGET, $media, $only_active);
-        $results = $this->multiMatch($media, $databases);
-        $task_logs = array_merge($task_logs, $results['logs']);
-        $targets_results = $results['results'];
-        array_walk($targets_results, function(&$result)
+        if($match_database == FingerprinterContract::MATCH_ALL
+        || $match_database == FingerprinterContract::MATCH_TARGET)
         {
-            $result['type'] = AudfprintFingerprinter::MATCH_TARGET;
-        });
-        $task_logs[] = $this->logLine("End:   Target multimatch");
-
+            $task_logs[] = $this->logLine("Start: Target multimatch");
+            $databases = $this->getDatabases(FingerprinterContract::MATCH_TARGET, $media, $only_active);
+            $results = $this->multiMatch($media, $databases);
+            $task_logs = array_merge($task_logs, $results['logs']);
+            $targets_results = $results['results'];
+            array_walk($targets_results, function(&$result)
+            {
+                $result['type'] = FingerprinterContract::MATCH_TARGET;
+            });
+            $task_logs[] = $this->logLine("End:   Target multimatch");
+        }
 
         /////
         // Resolve the matches
@@ -267,16 +278,16 @@ class AudfprintFingerprinter implements FingerprinterContract
     {
         switch($match['type'])
         {
-            case AudfprintFingerprinter::MATCH_TARGET:
+            case FingerprinterContract::MATCH_TARGET:
                 return 4;
                 break;
-            case AudfprintFingerprinter::MATCH_DISTRACTOR:
+            case FingerprinterContract::MATCH_DISTRACTOR:
                 return 3;
                 break;
-            case AudfprintFingerprinter::MATCH_POTENTIAL_TARGET:
+            case FingerprinterContract::MATCH_POTENTIAL_TARGET:
                 return 2;
                 break;
-            case AudfprintFingerprinter::MATCH_CORPUS:
+            case FingerprinterContract::MATCH_CORPUS:
                 return 1;
                 break;
 
@@ -362,7 +373,7 @@ class AudfprintFingerprinter implements FingerprinterContract
             throw new \Exception("This is already a corpus item");
 
         // Run the database insertion
-        $result = $this->addDatabaseItem($media, AudfprintFingerprinter::MATCH_CORPUS);
+        $result = $this->addDatabaseItem($media, FingerprinterContract::MATCH_CORPUS);
 
         // Save the result
         $media->is_corpus = true;
@@ -383,7 +394,7 @@ class AudfprintFingerprinter implements FingerprinterContract
             throw new \Exception("This is already a distractor");
 
         // Run the database insertion
-        $result = $this->addDatabaseItem($media, AudfprintFingerprinter::MATCH_DISTRACTOR);
+        $result = $this->addDatabaseItem($media, FingerprinterContract::MATCH_DISTRACTOR);
 
         // Save the result
         $media->is_distractor = true;
@@ -404,7 +415,7 @@ class AudfprintFingerprinter implements FingerprinterContract
             throw new \Exception("This is already a potential target");
 
         // Run the database insertion
-        $result = $this->addDatabaseItem($media, AudfprintFingerprinter::MATCH_POTENTIAL_TARGET);
+        $result = $this->addDatabaseItem($media, FingerprinterContract::MATCH_POTENTIAL_TARGET);
 
         // Save the result
         $media->is_potential_target = true;
@@ -425,7 +436,7 @@ class AudfprintFingerprinter implements FingerprinterContract
             throw new \Exception("This is already a target");
 
         // Run the database insertion
-        $result = $this->addDatabaseItem($media, AudfprintFingerprinter::MATCH_TARGET);
+        $result = $this->addDatabaseItem($media, FingerprinterContract::MATCH_TARGET);
 
         // Save the result
         $media->is_target = true;
@@ -631,10 +642,10 @@ class AudfprintFingerprinter implements FingerprinterContract
 
         // Make sure this is a valid match type
         $valid_types = [
-            AudfprintFingerprinter::MATCH_POTENTIAL_TARGET,
-            AudfprintFingerprinter::MATCH_CORPUS,
-            AudfprintFingerprinter::MATCH_DISTRACTOR,
-            AudfprintFingerprinter::MATCH_TARGET
+            FingerprinterContract::MATCH_POTENTIAL_TARGET,
+            FingerprinterContract::MATCH_CORPUS,
+            FingerprinterContract::MATCH_DISTRACTOR,
+            FingerprinterContract::MATCH_TARGET
         ];
         if(!in_array($match_type, $valid_types))
         {
@@ -665,15 +676,15 @@ class AudfprintFingerprinter implements FingerprinterContract
         switch($match_type)
         {
             // Corpus has a new set of buckets every day
-            case AudfprintFingerprinter::MATCH_CORPUS:
+            case FingerprinterContract::MATCH_CORPUS:
                 $base_time = $this->getBaseTime($media);
                 $base = date('Y_m_d', $base_time).'-project_'.$project->id.'-'.$match_type;
                 break;
 
             // All others have a single set of buckets
-            case AudfprintFingerprinter::MATCH_DISTRACTOR:
-            case AudfprintFingerprinter::MATCH_TARGET:
-            case AudfprintFingerprinter::MATCH_POTENTIAL_TARGET:
+            case FingerprinterContract::MATCH_DISTRACTOR:
+            case FingerprinterContract::MATCH_TARGET:
+            case FingerprinterContract::MATCH_POTENTIAL_TARGET:
                 $base = 'project_'.$project->id.'-'.$match_type;
                 break;
         }
@@ -769,16 +780,19 @@ class AudfprintFingerprinter implements FingerprinterContract
         {
             switch($match_type)
             {
-                // Corpus only cares about buckets within +/- 1 day of air date
+                // Corpus only cares about buckets within +/- 0 day of air date
                 // TODO: "3" days should be an env setting
-                case AudfprintFingerprinter::MATCH_CORPUS:
+                case FingerprinterContract::MATCH_CORPUS:
                     // Get the base date for this media
                     $base_time = $this->getBaseTime($media);
 
                     // Register the valid stems
                     $stems = [];
                     $stems[] = date('Y_m_d', $base_time);
-                    for($x = 1; $x <= 1; ++$x)
+
+                    // TODO: consider increasing this number; for now we just want that day in the name of speed
+                    $days_to_scan = 0;
+                    for($x = 1; $x <= $days_to_scan; ++$x)
                     {
                         $stems[] = date('Y_m_d', strtotime(' -'.$x.' day', $base_time));
                         $stems[] = date('Y_m_d', strtotime(' +'.$x.' day', $base_time));
@@ -793,9 +807,9 @@ class AudfprintFingerprinter implements FingerprinterContract
                     break;
 
                 // All others have no concept of "inactive" yet
-                case AudfprintFingerprinter::MATCH_DISTRACTOR:
-                case AudfprintFingerprinter::MATCH_TARGET:
-                case AudfprintFingerprinter::MATCH_POTENTIAL_TARGET:
+                case FingerprinterContract::MATCH_DISTRACTOR:
+                case FingerprinterContract::MATCH_TARGET:
+                case FingerprinterContract::MATCH_POTENTIAL_TARGET:
                     break;
             }
         }
@@ -1205,10 +1219,15 @@ class AudfprintFingerprinter implements FingerprinterContract
             {
                 $match_program = $preg_matches[1];
             }
+            else
+            {
+                $match_program = "";
+            }
 
             // If we pulled program names, skip the matches between similar program names
             // Similarity here means there is only a 3 character difference
             if($media_program != ""
+            && $match_program != ""
             && similar_text($match_program, $media_program) > (max(strlen($match_program), strlen($media_program)) - 3))
                 continue;
 

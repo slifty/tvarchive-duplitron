@@ -13,7 +13,9 @@ class Task extends Model
     const STATUS_FAILED = -1;
 
     const TYPE_MATCH = 'match';
+    const TYPE_MATCH_TARGETS = 'match_targets';
     const TYPE_FULL_MATCH = 'full_match';
+
     const TYPE_CORPUS_ADD = 'corpus_add';
     const TYPE_CORPUS_REMOVE = 'corpus_remove';
     const TYPE_POTENTIAL_TARGET_ADD = 'potential_target_add';
