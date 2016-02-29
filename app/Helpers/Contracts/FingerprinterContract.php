@@ -83,11 +83,11 @@ interface FingerprinterContract
 
 
     /**
-     * Clean up any cached files associated with a given media item.
-     * @param  object $media the media object whose cached files are being removed
-     * @return object        the result object, containing output logs and data
+     * Clean up files associated with a project.
+     * @param  object $project the project to clean
+     * @return object          the result object, containing output logs and data
      */
-    public function cleanUp($media);
+    public function cleanProject($project);
 
 
 }

@@ -40,6 +40,12 @@ class AudfprintFingerprinter implements FingerprinterContract
         $targets_results = [];
 
         $task_logs[] = $this->logLine("Starting");
+
+        // Grab a shared lock file for the project, since we're reading fingerprint databases
+        $task_logs[] = $this->logLine("Start: Obtaining project lock");
+        $project_lockfile = $this->getProjectLock($project, LOCK_SH);
+        $task_logs[] = $this->logLine("End:   Obtaining project lock");
+
         $task_logs[] = $this->logLine("Start: Prepare media");
         $afpt_files = $this->prepareMedia($media);
         $afpt_file = $afpt_files['full']; // We use the full file for matching
@@ -54,7 +60,7 @@ class AudfprintFingerprinter implements FingerprinterContract
         || $match_database == FingerprinterContract::MATCH_CORPUS)
         {
             $task_logs[] = $this->logLine("Start: Corpus multimatch");
-            $databases = $this->getDatabases(FingerprinterContract::MATCH_CORPUS, $media, $only_active);
+            $databases = $this->getDatabasesByMedia(FingerprinterContract::MATCH_CORPUS, $media, $only_active);
             $results = $this->multiMatch($media, $databases);
             $task_logs = array_merge($task_logs, $results['logs']);
             $corpus_results = $results['results'];
@@ -70,7 +76,7 @@ class AudfprintFingerprinter implements FingerprinterContract
         || $match_database == FingerprinterContract::MATCH_POTENTIAL_TARGET)
         {
             $task_logs[] = $this->logLine("Start: Potential target multimatch");
-            $databases = $this->getDatabases(FingerprinterContract::MATCH_POTENTIAL_TARGET, $media, $only_active);
+            $databases = $this->getDatabasesByMedia(FingerprinterContract::MATCH_POTENTIAL_TARGET, $media, $only_active);
             $results = $this->multiMatch($media, $databases);
             $task_logs = array_merge($task_logs, $results['logs']);
             $potential_targets_results = $results['results'];
@@ -86,7 +92,7 @@ class AudfprintFingerprinter implements FingerprinterContract
         || $match_database == FingerprinterContract::MATCH_DISTRACTOR)
         {
             $task_logs[] = $this->logLine("Start: Distractor multimatch");
-            $databases = $this->getDatabases(FingerprinterContract::MATCH_DISTRACTOR, $media, $only_active);
+            $databases = $this->getDatabasesByMedia(FingerprinterContract::MATCH_DISTRACTOR, $media, $only_active);
             $results = $this->multiMatch($media, $databases);
             $task_logs = array_merge($task_logs, $results['logs']);
             $distractors_results = $results['results'];
@@ -102,7 +108,7 @@ class AudfprintFingerprinter implements FingerprinterContract
         || $match_database == FingerprinterContract::MATCH_TARGET)
         {
             $task_logs[] = $this->logLine("Start: Target multimatch");
-            $databases = $this->getDatabases(FingerprinterContract::MATCH_TARGET, $media, $only_active);
+            $databases = $this->getDatabasesByMedia(FingerprinterContract::MATCH_TARGET, $media, $only_active);
             $results = $this->multiMatch($media, $databases);
             $task_logs = array_merge($task_logs, $results['logs']);
             $targets_results = $results['results'];
@@ -177,6 +183,12 @@ class AudfprintFingerprinter implements FingerprinterContract
 
         // Consolidate matches of the same file + type
         $segments = $this->formSegments($matches);
+
+        // We're done messing with project files, release the lock
+        $task_logs[] = $this->logLine("Start: Releasing project lock");
+        flock($project_lockfile, LOCK_UN);
+        fclose($project_lockfile);
+        $task_logs[] = $this->logLine("End:   Releasing project lock");
 
         $task_logs[] = $this->logLine("End:   Resolve Matches");
 
@@ -296,7 +308,7 @@ class AudfprintFingerprinter implements FingerprinterContract
 
 
     /**
-     * Given a media item and match type, add it to the database
+     * Given a media item and match type, add it to the database.
      * @param [type] $media      [description]
      * @param [type] $match_type [description]
      */
@@ -305,6 +317,12 @@ class AudfprintFingerprinter implements FingerprinterContract
         $task_logs = array();
 
         $task_logs[] = $this->logLine("Starting");
+
+        // Grab a shared lock file for the project, since we're editing fingerprint databases
+        $task_logs[] = $this->logLine("Start: Obtaining project lock");
+        $project_lockfile = $this->getProjectLock($media->project, LOCK_SH);
+        $task_logs[] = $this->logLine("End:   Obtaining project lock");
+
         $task_logs[] = $this->logLine("Start: Prepare media");
         $afpt_files = $this->prepareMedia($media);
         $task_logs[] = $this->logLine("End:   Prepare media");
@@ -341,19 +359,21 @@ class AudfprintFingerprinter implements FingerprinterContract
         }
 
         // Did we fill the database?
-        $drop_count = $this->getDropCount($task_logs);
-
-        // According to Dan Ellis, so long as drop count is less than 1% we're in the clear
-        if($drop_count > 1)
+        if($this->checkDropCount($task_logs))
         {
             $this->retireDatabase($database_path);
         }
 
         // Release the lock
         flock($lockfile, LOCK_UN);
-
-        // Close the file
         fclose($lockfile);
+
+        // We're done messing with project files, release the lock
+        $task_logs[] = $this->logLine("Start: Releasing project lock");
+        flock($project_lockfile, LOCK_UN);
+        fclose($project_lockfile);
+        $task_logs[] = $this->logLine("End:   Releasing project lock");
+
 
         return array(
             'results' => true,
@@ -368,6 +388,7 @@ class AudfprintFingerprinter implements FingerprinterContract
      */
     public function addCorpusItem($media)
     {
+
         // Make sure this media hasn't already been added
         if($media->is_corpus)
             throw new \Exception("This is already a corpus item");
@@ -567,6 +588,12 @@ class AudfprintFingerprinter implements FingerprinterContract
 
         // Get the fingerprints
         $task_logs[] = $this->logLine("Starting");
+
+        // Grab a shared lock file for the project, since we're editing fingerprint databases
+        $task_logs[] = $this->logLine("Start: Obtaining project lock");
+        $project_lockfile = $this->getProjectLock($media->project, LOCK_SH);
+        $task_logs[] = $this->logLine("End:   Obtaining project lock");
+
         $task_logs[] = $this->logLine("Start: Prepare media");
         $afpt_files = $this->prepareMedia($media);
         $task_logs[] = $this->logLine("End:   Prepare media");
@@ -606,29 +633,228 @@ class AudfprintFingerprinter implements FingerprinterContract
             throw new \Exception("Couldn't obtain a lock for ".$database_path);
         }
 
-        // Close the file
+        // Close the lock file
         fclose($lockfile);
+
+        // We're done messing with project files, release the lock
+        $task_logs[] = $this->logLine("Start: Releasing project lock");
+        flock($project_lockfile, LOCK_UN);
+        fclose($project_lockfile);
+        $task_logs[] = $this->logLine("End:   Releasing project lock");
+
         return $task_logs;
     }
-
 
 
     /**
      * See contract for documentation
      */
-    public function cleanUp($media)
+    public function cleanProject($project)
     {
         $task_logs = array();
+        $results = array();
+
+        // Get an exclusive project lock, since we are going to be potentially deleting fingerprint databases
+        $task_logs[] = $this->logLine("Start: Obtaining project lock");
+        $project_lockfile = $this->getProjectLock($project, LOCK_EX);
+        $task_logs[] = $this->logLine("End:   Obtaining project lock");
 
         $task_logs[] = $this->logLine("Start: Removing cached files");
-        $results = $this->loader->removeCachedFiles($media);
+        // $results = $this->loader->removeCachedFiles($media);
         $task_logs[] = $this->logLine("End:   Removing cached files");
+
+
+        /////////////////////////
+        // Consolidate potential targets
+        $task_logs[] = $this->logLine("Start: Consolidating potential target databases");
+
+        // Get the list
+        $databases = $this->getDatabasesByProject(FingerprinterContract::MATCH_POTENTIAL_TARGET, $project);
+
+        // Consolidate the list
+        $database_remappings = $this->mergeDatabases($databases);
+        $results['potential_targets'] = $database_remappings;
+
+        // Remap moved media
+        foreach($database_remappings as $remap) {
+            $original_database = $remap['original'];
+            $new_database = $remap['new'];
+
+            // Get all media that was in the original database
+            $media_list = Media::where('potential_target_database', '=', $original_database);
+
+            // Update the database to point to the new location
+            foreach($media_list as $media) {
+                $media->potential_target_database = $new_database;
+                $media->save();
+            }
+        }
+        $task_logs[] = $this->logLine("End:   Consolidating potential target databases");
+
+
+        /////////////////////////
+        // Consolidate corpuses
+        $task_logs[] = $this->logLine("Start: Consolidating corpus databases");
+
+        // Get the list
+        $databases = $this->getDatabasesByProject(FingerprinterContract::MATCH_CORPUS, $project);
+
+        // Corpus is a little different; we want to keep the days separate
+        // Break the list by date
+
+
+        // Consolidate the list
+        $database_remappings = $this->mergeDatabases($databases);
+        $results['corpuses'] = $database_remappings;
+
+        // Remap moved media
+        foreach($database_remappings as $remap) {
+            $original_database = $remap['original'];
+            $new_database = $remap['new'];
+
+            // Get all media that was in the original database
+            $media_list = Media::where('corpus_database', '=', $original_database);
+
+            // Update the database to point to the new location
+            foreach($media_list as $media) {
+                $media->corpus_database = $new_database;
+                $media->save();
+            }
+        }
+        $task_logs[] = $this->logLine("End:   Consolidating corpus databases");
+
+
+        /////////////////////////
+        // Consolidate distractors
+        $task_logs[] = $this->logLine("Start: Consolidating distractor databases");
+
+        // Get the list
+        $databases = $this->getDatabasesByProject(FingerprinterContract::MATCH_DISTRACTOR, $project);
+
+        // Consolidate the list
+        $database_remappings = $this->mergeDatabases($databases);
+        $results['distractors'] = $database_remappings;
+
+        // Remap moved media
+        foreach($database_remappings as $remap) {
+            $original_database = $remap['original'];
+            $new_database = $remap['new'];
+
+            // Get all media that was in the original database
+            $media_list = Media::where('distractor_database', '=', $original_database);
+
+            // Update the database to point to the new location
+            foreach($media_list as $media) {
+                $media->distractor_database = $new_database;
+                $media->save();
+            }
+        }
+        $task_logs[] = $this->logLine("End:   Consolidating distractor databases");
+
+
+        /////////////////////////
+        // Consolidate targets
+        $task_logs[] = $this->logLine("Start: Consolidating target databases");
+
+        // Get the list
+        $databases = $this->getDatabasesByProject(FingerprinterContract::MATCH_TARGET, $project);
+
+        // Consolidate the list
+        $database_remappings = $this->mergeDatabases($databases);
+        $results['targets'] = $database_remappings;
+
+        // Remap moved media
+        foreach($database_remappings as $remap) {
+            $original_database = $remap['original'];
+            $new_database = $remap['new'];
+
+            // Get all media that was in the original database
+            $media_list = Media::where('target_database', '=', $original_database);
+
+            // Update the database to point to the new location
+            foreach($media_list as $media) {
+                $media->target_database = $new_database;
+                $media->save();
+            }
+        }
+        $task_logs[] = $this->logLine("End:   Consolidating target databases");
+
+
+        // We're done messing with project files, release the lock
+        $task_logs[] = $this->logLine("Start: Releasing project lock");
+        flock($project_lockfile, LOCK_UN);
+        fclose($project_lockfile);
+        $task_logs[] = $this->logLine("End:   Releasing project lock");
+
+        print_r($results);
 
         return array(
             'results' => $results,
             'output' => $task_logs
         );
+    }
 
+    /**
+     * Takes a list of databases, combines them to the smallest number possible, and returns the mapping.
+     * @param  [type] $databases  [description]
+     * @return [type]             [description]
+     */
+    private function mergeDatabases($databases) {
+        $database_remappings = [];
+        $root_database = "";
+
+        foreach($databases as $database) {
+
+            // Don't consolidate filled databases
+            if($this->isRetired($database))
+                continue;
+
+            // Do we have a "first" database for our merge yet?
+            if($root_database == "") {
+                $root_database = $database;
+                continue;
+            }
+
+            // Perform the merge
+            $first_database = $root_database;
+            $second_database = $database;        // Perform the merge
+            $cmd = ['merge', '-d', $this->resolveCachePath($first_database), '--maxtime', '262144', '--shifts', '1', '--density', '20', $this->resolveCachePath($second_database)];
+            $merge_logs = $this->runAudfprint($cmd);
+
+            // Check if the first database is now filled
+            if($this->checkDropCount($merge_logs)) {
+                $this->retireDatabase($first_database);
+                // Stop adding to it
+                $root_database = "";
+            }
+
+            // Throw away the second database
+            $remove_path = env('FPRINT_STORE').$second_database;
+            unlink($remove_path);
+
+            $database_remappings[] = array(
+                'original' => $second_database,
+                'new' => $first_database
+            );
+        }
+        return $database_remappings;
+    }
+
+    /**
+     * Gets a lock on the entire project.
+     * All methods that read, write, or create fingerprint databases MUST obtain a nonexclusive project lock.
+     * All methods that remove fingerprints or fingerprint databases MUST obtain an exclusive project lock.
+     * @param  [type] $type [description]
+     * @return [type]       [description]
+     */
+    private function getProjectLock($project, $type=LOCK_EX) {
+        $project_path = "project".$project->id;
+        $lockfile = $this->touchFlockFile($project_path);
+        if(flock($lockfile, $type)) {
+            return $lockfile;
+        } else {
+            throw new \Exception("Couldn't obtain a lock for ".$lockfile);
+        }
     }
 
 
@@ -760,8 +986,7 @@ class AudfprintFingerprinter implements FingerprinterContract
      * @param  boolean $only_active only relevant for match types where a database can become inactive, determines the filter to use.
      * @return array(string)        an array of paths to databases
      */
-    private function getDatabases($match_type, $media, $only_active = false) {
-
+    private function getDatabasesByMedia($match_type, $media, $only_active = false) {
         $project = $media->project;
 
         // Set up the cache path
@@ -813,6 +1038,31 @@ class AudfprintFingerprinter implements FingerprinterContract
                     break;
             }
         }
+
+        // Prefix the cache path to each item
+        foreach ($databases as &$value)
+            $value = $cache_path.'/'.$value;
+
+        return $databases;
+    }
+
+    /**
+     * This method returns an unfiltered list of databases for a given project + type combination
+     * @param  [type] $match_type [description]
+     * @param  [type] $project    [description]
+     * @return [type]             [description]
+     */
+    private function getDatabasesByProject($match_type, $project) {
+        // Set up the cache path
+        $cache_path = 'pklz_cache/'.$project->id.'/'.$match_type;
+        if(!is_dir(env('FPRINT_STORE').$cache_path))
+            return [];
+
+        $databases = scandir(env('FPRINT_STORE').$cache_path);
+
+        // Drop the first two items ('..'' and '.')
+        unset($databases[0]);
+        unset($databases[1]);
 
         // Prefix the cache path to each item
         foreach ($databases as &$value)
@@ -873,6 +1123,12 @@ class AudfprintFingerprinter implements FingerprinterContract
         // For now we mark a DB as full using it's filepath
         $new_path = str_replace('.pklz', '-full.pklz', $database_path);
         rename(env('FPRINT_STORE').$database_path, env('FPRINT_STORE').$new_path);
+    }
+
+    private function isRetired($database_path) {
+        if(strpos($database_path, '-full') !== false)
+            return true;
+        return false;
     }
 
 
@@ -1172,6 +1428,22 @@ class AudfprintFingerprinter implements FingerprinterContract
         }
 
         return $drop_count;
+    }
+
+
+    /**
+     * Check to see if the drop count is serious enough to warrant retiring the database
+     * @param  [type] $logs [description]
+     * @return [type]       [description]
+     */
+    private function checkDropCount($logs)
+    {
+        $drop_count = $this->getDropCount($logs);
+
+        // According to Dan Ellis, so long as drop count is less than 1% we're in the clear
+        if($drop_count > 1)
+            return true;
+        return false;
     }
 
 

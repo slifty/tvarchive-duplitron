@@ -12,32 +12,7 @@
 */
 
 Route::get('/', function () {
-    // $docker = new Docker\Docker(Docker\Http\DockerClient::createWithEnv());
-
-    // $container = new Docker\Container(
-    //     [
-    //         'Image' => env('DOCKER_FPRINT_IMAGE'),
-    //         'Cmd' => ['precompute', '/var/audfprint/music.mp3'],
-    //         'HostConfig' => [
-    //             'Binds' => [env('FPRINT_STORE').':/var/audfprint']
-    //         ]
-    //     ]
-    // );
-
-    // $manager = $docker->getContainerManager();
-    // $manager->create($container);
-    // $manager->run($container, function($output, $type) {
-    //     echo($output);
-    // });
-
-    // printf('Container\'s id is %s', $container->getId());
-    // printf('Container\'s name is %s', $container->getName());
-    // printf('Container\'s exit code is %d', $container->getExitCode());
-    //
-
-
-
-    return "What you have just witnessed is a test of Docker integration... or HAVE YOU!!??!?! (you haven't, I deleted that code.)";
+    return "";
 });
 
 
@@ -45,6 +20,8 @@ Route::get('/', function () {
  * REST for Project Model
  */
 Route::resource('/api/projects', 'ProjectController');
+
+Route::post('/api/projects/{id}/clean', 'ProjectController@clean');
 
 
 /**
