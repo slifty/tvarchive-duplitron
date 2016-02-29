@@ -2,7 +2,7 @@
 
 namespace Duplitron\Jobs;
 
-use Duplitron\Task;
+use Duplitron\ProjectTask;
 use Duplitron\Media;
 use Duplitron\Jobs\Job;
 use Duplitron\Project;
@@ -14,21 +14,21 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Contracts\Bus\SelfHandling;
 use Illuminate\Contracts\Queue\ShouldQueue;
 
-class CleanTask extends Job implements SelfHandling, ShouldQueue
+class PerformProjectTask extends Job implements SelfHandling, ShouldQueue
 {
     use InteractsWithQueue, SerializesModels;
 
     // Models
-    protected $project; // The publicly facing Duplitron task object associated with this job
+    protected $task; // The publicly facing Duplitron task object associated with this job
 
     /**
      * Create a new job instance.
      *
      * @return void
      */
-    public function __construct(Project $project)
+    public function __construct(ProjectTask $task)
     {
-        $this->project = $project;
+        $this->task = $task;
     }
 
     /**
@@ -41,7 +41,20 @@ class CleanTask extends Job implements SelfHandling, ShouldQueue
         if($this->attempts() > 1)
             return;
 
-        $fingerprinter->cleanProject($this->project);
+        // Mark this as processing
+        $this->task->status_code = ProjectTask::STATUS_PROCESSING;
+        $this->task->save();
+
+        // TODO: switch on task type
+        $results = $fingerprinter->cleanProject($this->task->project);
+        $this->task->result_data = json_encode($results['results']);
+        $this->task->result_output = json_encode($results['output']);
+
+
+        $this->task->status_code = ProjectTask::STATUS_FINISHED;
+        $this->task->save();
+
+        return;
     }
 
     /**

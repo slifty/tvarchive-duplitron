@@ -39,4 +39,11 @@ class Project extends Model
         return $this->hasMany('Duplitron\Media');
     }
 
+    /**
+     * Specify relationship with Project Tasks
+     */
+    public function tasks() {
+        return $this->hasMany('Duplitron\ProjectTask');
+    }
+
 }

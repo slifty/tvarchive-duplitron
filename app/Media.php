@@ -57,10 +57,10 @@ class Media extends Model
     protected $appends = ['match_categorization'];
 
     /**
-     * Specify relationship with Tasks
+     * Specify relationship with Media Tasks
      */
     public function tasks() {
-        return $this->hasMany('Duplitron\Task');
+        return $this->hasMany('Duplitron\MediaTask');
     }
 
     /**

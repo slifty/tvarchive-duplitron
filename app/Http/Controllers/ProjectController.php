@@ -8,7 +8,7 @@ use Duplitron\Http\Requests;
 use Duplitron\Http\Controllers\Controller;
 
 use Duplitron\Project;
-use Duplitron\Jobs\CleanTask;
+use Duplitron\Jobs\ProjectTask;
 
 class ProjectController extends Controller
 {
@@ -91,16 +91,5 @@ class ProjectController extends Controller
     public function destroy($id)
     {
         //
-    }
-
-    /**
-     * This method will go through the fingerprint databases and consolidate them into the smallest number of databases possible
-     * @param  int  $id  the ID of the project to clean
-     * @return [type] [description]
-     */
-    public function clean($id)
-    {
-        $project = Project::find($id);
-        $this->dispatch(new CleanTask($project));
     }
 }

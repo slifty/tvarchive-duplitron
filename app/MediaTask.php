@@ -4,7 +4,7 @@ namespace Duplitron;
 
 use Illuminate\Database\Eloquent\Model;
 
-class Task extends Model
+class MediaTask extends Model
 {
     const STATUS_NEW = 0;
     const STATUS_STARTING = 1;
@@ -36,7 +36,7 @@ class Task extends Model
      *
      * @var string
      */
-    protected $table = 'tasks';
+    protected $table = 'media_tasks';
 
     /**
      * The attributes that are mass assignable.

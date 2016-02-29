@@ -21,9 +21,6 @@ Route::get('/', function () {
  */
 Route::resource('/api/projects', 'ProjectController');
 
-Route::post('/api/projects/{id}/clean', 'ProjectController@clean');
-
-
 /**
  * REST for Media Model
  */
@@ -32,6 +29,8 @@ Route::resource('/api/media', 'MediaController');
 Route::get('/api/media/{id}/matches', 'MediaController@getMediaMatches');
 
 /**
- * REST for Task Model
+ * REST for Task Models
  */
-Route::resource('/api/tasks', 'TaskController');
+Route::resource('/api/media_tasks', 'MediaTaskController');
+
+Route::resource('/api/project_tasks', 'ProjectTaskController');

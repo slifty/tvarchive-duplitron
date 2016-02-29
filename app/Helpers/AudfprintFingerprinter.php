@@ -692,7 +692,6 @@ class AudfprintFingerprinter implements FingerprinterContract
         }
         $task_logs[] = $this->logLine("End:   Consolidating potential target databases");
 
-
         /////////////////////////
         // Consolidate corpuses
         $task_logs[] = $this->logLine("Start: Consolidating corpus databases");
@@ -702,28 +701,39 @@ class AudfprintFingerprinter implements FingerprinterContract
 
         // Corpus is a little different; we want to keep the days separate
         // Break the list by date
+        $buckets = array();
 
+        foreach($databases as $database) {
+            if(preg_match('/(\d\d\d\d\_\d\d\_\d\d)\-project/', $database, $matches)) {
+                $bucket = $matches[1];
+                if(!array_key_exists($bucket, $buckets))
+                    $buckets[$bucket] = array();
+                $buckets[$bucket][] = $database;
+            }
+        }
 
-        // Consolidate the list
-        $database_remappings = $this->mergeDatabases($databases);
-        $results['corpuses'] = $database_remappings;
+        // Consolidate the buckets
+        $results['corpuses'] = array();
+        foreach($buckets as $databases) {
+            $database_remappings = $this->mergeDatabases($databases);
+            $results['corpuses'] = array_merge($results['corpuses'], $database_remappings);
 
-        // Remap moved media
-        foreach($database_remappings as $remap) {
-            $original_database = $remap['original'];
-            $new_database = $remap['new'];
+            // Remap moved media
+            foreach($database_remappings as $remap) {
+                $original_database = $remap['original'];
+                $new_database = $remap['new'];
 
-            // Get all media that was in the original database
-            $media_list = Media::where('corpus_database', '=', $original_database);
+                // Get all media that was in the original database
+                $media_list = Media::where('corpus_database', '=', $original_database);
 
-            // Update the database to point to the new location
-            foreach($media_list as $media) {
-                $media->corpus_database = $new_database;
-                $media->save();
+                // Update the database to point to the new location
+                foreach($media_list as $media) {
+                    $media->corpus_database = $new_database;
+                    $media->save();
+                }
             }
         }
         $task_logs[] = $this->logLine("End:   Consolidating corpus databases");
-
 
         /////////////////////////
         // Consolidate distractors
@@ -780,14 +790,11 @@ class AudfprintFingerprinter implements FingerprinterContract
         }
         $task_logs[] = $this->logLine("End:   Consolidating target databases");
 
-
         // We're done messing with project files, release the lock
         $task_logs[] = $this->logLine("Start: Releasing project lock");
         flock($project_lockfile, LOCK_UN);
         fclose($project_lockfile);
         $task_logs[] = $this->logLine("End:   Releasing project lock");
-
-        print_r($results);
 
         return array(
             'results' => $results,

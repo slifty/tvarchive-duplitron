@@ -7,10 +7,10 @@ use Illuminate\Http\Request;
 use Duplitron\Http\Requests;
 use Duplitron\Http\Controllers\Controller;
 
-use Duplitron\Task;
+use Duplitron\MediaTask;
 use Duplitron\Jobs\PerformMediaTask;
 
-class TaskController extends Controller
+class MediaTaskController extends Controller
 {
     /**
      * Display a listing of the resource.
@@ -23,7 +23,7 @@ class TaskController extends Controller
         if($request->has('project_id'))
         {
             $results = \DB::table('media')
-                ->join('tasks', 'media.id', '=', 'tasks.media_id')
+                ->join('media_tasks', 'media.id', '=', 'media_tasks.media_id')
                 ->where('project_id', $request->input('project_id'));
         }
         else
@@ -36,20 +36,20 @@ class TaskController extends Controller
         {
             switch($request->input('status'))
             {
-                case Task::STATUS_NEW:
-                    $results = $results->where('status_code', Task::STATUS_NEW);
+                case MediaTask::STATUS_NEW:
+                    $results = $results->where('status_code', MediaTask::STATUS_NEW);
                     break;
-                case Task::STATUS_STARTING:
-                    $results = $results->where('status_code', Task::STATUS_STARTING);
+                case MediaTask::STATUS_STARTING:
+                    $results = $results->where('status_code', MediaTask::STATUS_STARTING);
                     break;
-                case Task::STATUS_PROCESSING:
-                    $results = $results->where('status_code', Task::STATUS_PROCESSING);
+                case MediaTask::STATUS_PROCESSING:
+                    $results = $results->where('status_code', MediaTask::STATUS_PROCESSING);
                     break;
-                case Task::STATUS_FINISHED:
-                    $results = $results->where('status_code', Task::STATUS_FINISHED);
+                case MediaTask::STATUS_FINISHED:
+                    $results = $results->where('status_code', MediaTask::STATUS_FINISHED);
                     break;
-                case Task::STATUS_FAILED:
-                    $results = $results->where('status_code', Task::STATUS_FAILED);
+                case MediaTask::STATUS_FAILED:
+                    $results = $results->where('status_code', MediaTask::STATUS_FAILED);
                     break;
             }
         }
@@ -74,8 +74,8 @@ class TaskController extends Controller
     public function store(Request $request)
     {
         // Create a new task object
-        $task = new Task();
-        $task->status_code = Task::STATUS_NEW;
+        $task = new MediaTask();
+        $task->status_code = MediaTask::STATUS_NEW;
         $task->attempts = 0;
         $task->media_id = $request->input('media_id');
         $task->type = $request->input('type');
@@ -95,7 +95,7 @@ class TaskController extends Controller
      */
     public function show($id)
     {
-        $task = Task::find($id);
+        $task = MediaTask::find($id);
         return $task;
     }
 

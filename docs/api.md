@@ -258,9 +258,9 @@ Code | Content
 
 ----------
 
-## Tasks
+## MediaTasks
 
-###### Task Object JSON
+###### MediaTask Object JSON
 
 ```json
 	{
@@ -282,7 +282,7 @@ Code | Content
 	}
 ```
 
-###### Task Statuses
+###### MediaTask Statuses
 
 Code | Description
 --- |:---
@@ -301,7 +301,7 @@ Code | Description
 
 
 
-###### Task Types
+###### MediaTask Types
 
  * `match`: compare the media with the project fingerprints.
 
@@ -328,7 +328,7 @@ Code | Description
 ####### Match results
 
 
-### Create Task
+### Create MediaTask
 
 Once media is registered in the system it can be processed using fingerprinting and matching algorithms.  These activities can be intense, so they are handled by a task queue (instead of being synchronous).
 
@@ -349,7 +349,7 @@ Once media is registered in the system it can be processed using fingerprinting 
 ###### Required
 
  * `media_id`: The ID of the media file that this task will be invoked on.
- * `type`: The type of task to be performed (see "Task Types")
+ * `type`: The type of task to be performed (see "MediaTask Types")
 
 ###### Optional
 
@@ -368,7 +368,7 @@ Once media is registered in the system it can be processed using fingerprinting 
 
 Code | Content
 --- |:---
-200 | Task Object JSON
+200 | MediaTask Object JSON
 
 ##### Error Response
 
@@ -396,7 +396,7 @@ Code | Content
 
 ----------
 
-### Get Task
+### Get MediaTask
 
 ##### URL
 

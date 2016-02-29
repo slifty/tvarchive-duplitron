@@ -2,7 +2,7 @@
 
 namespace Duplitron\Jobs;
 
-use Duplitron\Task;
+use Duplitron\MediaTask;
 use Duplitron\Media;
 use Duplitron\Jobs\Job;
 
@@ -25,7 +25,7 @@ class PerformMediaTask extends Job implements SelfHandling, ShouldQueue
      *
      * @return void
      */
-    public function __construct(Task $task)
+    public function __construct(MediaTask $task)
     {
         $this->task = $task;
     }
@@ -42,7 +42,7 @@ class PerformMediaTask extends Job implements SelfHandling, ShouldQueue
 
         // Load the media file locally
         // Mark this as processing
-        $this->task->status_code = Task::STATUS_PROCESSING;
+        $this->task->status_code = MediaTask::STATUS_PROCESSING;
         $this->task->save();
 
         // TODO: Errors should be caught in a better way
@@ -51,84 +51,84 @@ class PerformMediaTask extends Job implements SelfHandling, ShouldQueue
             // Run the Docker commands based on the task type
             switch($this->task->type)
             {
-                case Task::TYPE_MATCH:
+                case MediaTask::TYPE_MATCH:
                     $results = $fingerprinter->runMatch($this->task->media, true);
                     $this->task->result_data = json_encode($results['results']);
                     $this->task->result_output = json_encode($results['output']);
                     $this->task->save();
                     break;
 
-                case Task::TYPE_MATCH_TARGETS:
+                case MediaTask::TYPE_MATCH_TARGETS:
                     $results = $fingerprinter->runMatch($this->task->media, true, FingerprinterContract::MATCH_TARGET);
                     $this->task->result_data = json_encode($results['results']);
                     $this->task->result_output = json_encode($results['output']);
                     $this->task->save();
                     break;
 
-                case Task::TYPE_FULL_MATCH: // All files, not just recent ones
+                case MediaTask::TYPE_FULL_MATCH: // All files, not just recent ones
                     $results = $fingerprinter->runMatch($this->task->media, false);
                     $this->task->result_data = json_encode($results['results']);
                     $this->task->result_output = json_encode($results['output']);
                     $this->task->save();
                     break;
 
-                case Task::TYPE_CORPUS_ADD:
+                case MediaTask::TYPE_CORPUS_ADD:
                     $results = $fingerprinter->addCorpusItem($this->task->media);
                     $this->task->result_data = json_encode($results['results']);
                     $this->task->result_output = json_encode($results['output']);
                     $this->task->save();
                     break;
 
-                case Task::TYPE_POTENTIAL_TARGET_ADD:
+                case MediaTask::TYPE_POTENTIAL_TARGET_ADD:
                     $results = $fingerprinter->addPotentialTargetsItem($this->task->media);
                     $this->task->result_data = json_encode($results['results']);
                     $this->task->result_output = json_encode($results['output']);
                     $this->task->save();
                     break;
 
-                case Task::TYPE_DISTRACTOR_ADD:
+                case MediaTask::TYPE_DISTRACTOR_ADD:
                     $results = $fingerprinter->addDistractorsItem($this->task->media);
                     $this->task->result_data = json_encode($results['results']);
                     $this->task->result_output = json_encode($results['output']);
                     $this->task->save();
                     break;
 
-                case Task::TYPE_TARGET_ADD:
+                case MediaTask::TYPE_TARGET_ADD:
                     $results = $fingerprinter->addTargetsItem($this->task->media);
                     $this->task->result_data = json_encode($results['results']);
                     $this->task->result_output = json_encode($results['output']);
                     $this->task->save();
                     break;
 
-                case Task::TYPE_CORPUS_REMOVE:
+                case MediaTask::TYPE_CORPUS_REMOVE:
                     $results = $fingerprinter->removeCorpusItem($this->task->media);
                     $this->task->result_data = json_encode($results['results']);
                     $this->task->result_output = json_encode($results['output']);
                     $this->task->save();
                     break;
 
-                case Task::TYPE_POTENTIAL_TARGET_REMOVE:
+                case MediaTask::TYPE_POTENTIAL_TARGET_REMOVE:
                     $results = $fingerprinter->removePotentialTargetsItem($this->task->media);
                     $this->task->result_data = json_encode($results['results']);
                     $this->task->result_output = json_encode($results['output']);
                     $this->task->save();
                     break;
 
-                case Task::TYPE_TARGET_REMOVE:
+                case MediaTask::TYPE_TARGET_REMOVE:
                     $results = $fingerprinter->removeTargetsItem($this->task->media);
                     $this->task->result_data = json_encode($results['results']);
                     $this->task->result_output = json_encode($results['output']);
                     $this->task->save();
                     break;
 
-                case Task::TYPE_DISTRACTOR_REMOVE:
+                case MediaTask::TYPE_DISTRACTOR_REMOVE:
                     $results = $fingerprinter->removeDistractorsItem($this->task->media);
                     $this->task->result_data = json_encode($results['results']);
                     $this->task->result_output = json_encode($results['output']);
                     $this->task->save();
                     break;
 
-                case Task::TYPE_CLEAN:
+                case MediaTask::TYPE_CLEAN:
                     $results = $fingerprinter->cleanUp($this->task->media);
                     $this->task->result_data = json_encode($results['results']);
                     $this->task->result_output = json_encode($results['output']);
@@ -150,16 +150,16 @@ class PerformMediaTask extends Job implements SelfHandling, ShouldQueue
             );
             $this->task->result_data = json_encode($result);
             $this->task->result_output = json_encode($output);
-            $this->task->status_code = Task::STATUS_FAILED;
+            $this->task->status_code = MediaTask::STATUS_FAILED;
             $this->task->save();
             return;
         }
 
         // TODO: this is honestly the worst thing ever.
         if($this->hasErrors($this->task->result_output))
-            $this->task->status_code = Task::STATUS_FAILED;
+            $this->task->status_code = MediaTask::STATUS_FAILED;
         else
-            $this->task->status_code = Task::STATUS_FINISHED;
+            $this->task->status_code = MediaTask::STATUS_FINISHED;
 
         // Mark this as finished
         $this->task->save();
@@ -183,7 +183,7 @@ class PerformMediaTask extends Job implements SelfHandling, ShouldQueue
     public function failed()
     {
         // Called when the job is failing...
-        $this->task->status_code = Task::STATUS_FAILED;
+        $this->task->status_code = MediaTask::STATUS_FAILED;
         $this->task->save();
     }
 
