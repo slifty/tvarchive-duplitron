@@ -38,6 +38,7 @@ class AudfprintFingerprinter implements FingerprinterContract
         $potential_targets_results = [];
         $distractors_results = [];
         $targets_results = [];
+        $project = $media->project;
 
         $task_logs[] = $this->logLine("Starting");
 
