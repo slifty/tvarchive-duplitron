@@ -682,7 +682,7 @@ class AudfprintFingerprinter implements FingerprinterContract
             $new_database = $remap['new'];
 
             // Get all media that was in the original database
-            $media_list = Media::where('potential_target_database', '=', $original_database);
+            $media_list = Media::where('potential_target_database', '=', $original_database)->get();
 
             // Update the database to point to the new location
             foreach($media_list as $media) {
@@ -724,7 +724,7 @@ class AudfprintFingerprinter implements FingerprinterContract
                 $new_database = $remap['new'];
 
                 // Get all media that was in the original database
-                $media_list = Media::where('corpus_database', '=', $original_database);
+                $media_list = Media::where('corpus_database', '=', $original_database)->get();
 
                 // Update the database to point to the new location
                 foreach($media_list as $media) {
@@ -752,7 +752,7 @@ class AudfprintFingerprinter implements FingerprinterContract
             $new_database = $remap['new'];
 
             // Get all media that was in the original database
-            $media_list = Media::where('distractor_database', '=', $original_database);
+            $media_list = Media::where('distractor_database', '=', $original_database)->get();
 
             // Update the database to point to the new location
             foreach($media_list as $media) {
@@ -780,7 +780,7 @@ class AudfprintFingerprinter implements FingerprinterContract
             $new_database = $remap['new'];
 
             // Get all media that was in the original database
-            $media_list = Media::where('target_database', '=', $original_database);
+            $media_list = Media::where('target_database', '=', $original_database)->get();
 
             // Update the database to point to the new location
             foreach($media_list as $media) {
