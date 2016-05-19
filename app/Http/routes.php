@@ -34,3 +34,5 @@ Route::get('/api/media/{id}/matches', 'MediaController@getMediaMatches');
 Route::resource('/api/media_tasks', 'MediaTaskController');
 
 Route::resource('/api/project_tasks', 'ProjectTaskController');
+
+Route::post('/api/clean_everything', 'ProjectTaskController@cleanEverything');

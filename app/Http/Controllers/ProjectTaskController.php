@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Duplitron\Http\Requests;
 use Duplitron\Http\Controllers\Controller;
 
+use Duplitron\Project;
 use Duplitron\ProjectTask;
 use Duplitron\Jobs\PerformProjectTask;
 
@@ -125,5 +126,34 @@ class ProjectTaskController extends Controller
     public function destroy($id)
     {
         //
+    }
+
+    /**
+     * Store a newly created resource in storage.
+     *
+     * @param  Request  $request
+     * @return Response
+     */
+    public function cleanEverything() {
+
+        $projects = Project::all();
+
+        $tasks = array();
+
+        foreach($projects as $project) {
+            // Create a new task object
+            $task = new ProjectTask();
+            $task->status_code = ProjectTask::STATUS_NEW;
+            $task->attempts = 0;
+            $task->project_id = $project->id;
+            $task->type = ProjectTask::TYPE_CLEAN;
+            $task->save();
+
+            $tasks[] = $task;
+
+            // Dispatch a job for this task
+            $this->dispatch(new PerformProjectTask($task));
+        }
+        return $tasks;
     }
 }
