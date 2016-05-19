@@ -127,43 +127,43 @@ class AudfprintFingerprinter implements FingerprinterContract
         // Create a master list of matches
         $matches = array_merge($corpus_results, $potential_targets_results, $distractors_results, $targets_results);
 
-        $task_logs[] = $this->logLine("Start: Save Matches");
-        // Save any previously unsaved matches
-        foreach($matches as $match)
-        {
-            // To prevent mirror duplicates, stored matches always put the higher ID media as the destination
-            if($match['destination_media']->id > $media->id)
-            {
-                $destination_id = $match['destination_media']->id;
-                $destination_start = $match['target_start'];
-                $source_id = $media->id;
-                $source_start = $match['start'];
-            }
-            else
-            {
-                $source_id = $match['destination_media']->id;
-                $source_start = $match['target_start'];
-                $destination_id = $media->id;
-                $destination_start = $match['start'];
-            }
+        // $task_logs[] = $this->logLine("Start: Save Matches");
+        // // Save any previously unsaved matches
+        // foreach($matches as $match)
+        // {
+        //     // To prevent mirror duplicates, stored matches always put the higher ID media as the destination
+        //     if($match['destination_media']->id > $media->id)
+        //     {
+        //         $destination_id = $match['destination_media']->id;
+        //         $destination_start = $match['target_start'];
+        //         $source_id = $media->id;
+        //         $source_start = $match['start'];
+        //     }
+        //     else
+        //     {
+        //         $source_id = $match['destination_media']->id;
+        //         $source_start = $match['target_start'];
+        //         $destination_id = $media->id;
+        //         $destination_start = $match['start'];
+        //     }
 
-            // TODO: convert this to bulk insert, (eloquent doesn't seem to have an elegant way to bulk insert right now.)
-            $match_object = new Match();
-            $match_object->duration = $match['duration'];
-            $match_object->destination_id = $destination_id;
-            $match_object->destination_start = $destination_start;
-            $match_object->source_id = $source_id;
-            $match_object->source_start = $source_start;
-            try
-            {
-                $match_object->save();
-            }
-            catch(\Exception $e)
-            {
-                // TODO: check to be sure the exception is a dupe key (which is OK)
-            }
-        }
-        $task_logs[] = $this->logLine("End:   Save Matches");
+        //     // TODO: convert this to bulk insert, (eloquent doesn't seem to have an elegant way to bulk insert right now.)
+        //     $match_object = new Match();
+        //     $match_object->duration = $match['duration'];
+        //     $match_object->destination_id = $destination_id;
+        //     $match_object->destination_start = $destination_start;
+        //     $match_object->source_id = $source_id;
+        //     $match_object->source_start = $source_start;
+        //     try
+        //     {
+        //         $match_object->save();
+        //     }
+        //     catch(\Exception $e)
+        //     {
+        //         // TODO: check to be sure the exception is a dupe key (which is OK)
+        //     }
+        // }
+        // $task_logs[] = $this->logLine("End:   Save Matches");
 
 
         $task_logs[] = $this->logLine("Start: Resolve Matches");
@@ -1397,7 +1397,10 @@ class AudfprintFingerprinter implements FingerprinterContract
                     "duration" => floatval($match_data[1]),
                     "start" => floatval($match_data[2]),
                     "target_start" => floatval($match_data[4]) + floatval($file_data[2]) * env('FPRINT_CHUNK_LENGTH'),
-                    "destination_media" => $destination_media
+                    "destination_media" => $destination_media,
+                    "consecutive_hashes" => floatval($match_data[6]),
+                    "common_hashes" => floatval($match_data[7]),
+                    "rank" => floatval($match_data[8])
                 ];
 
                 // Combine matches across chunks
