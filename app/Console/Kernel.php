@@ -26,5 +26,10 @@ class Kernel extends ConsoleKernel
     {
         $schedule->command('inspire')
                  ->hourly();
+
+        $schedule->call('AdFinder\Http\Controllers\ProjectTaskController@cleanEverything')
+                 ->dailyAt('5:00')
+                 ->name("runCleaningJob")
+                 ->withoutOverlapping();
     }
 }
