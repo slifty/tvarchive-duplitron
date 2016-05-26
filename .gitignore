@@ -17,5 +17,6 @@ Homestead.json
 !/storage/audfprint/flocks
 /storage/audfprint/flocks/*
 !*.gitkeep
+/scripts/data*
 
 *.DS_Store
