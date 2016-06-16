@@ -25,28 +25,9 @@ class ProjectTaskController extends Controller
         {
             // TODO: Real errors.
             return ['ERR: Project ID Required'];
-        }
-
-        if($request->has('status'))
-        {
-            switch($request->input('status'))
-            {
-                case ProjectTask::STATUS_NEW:
-                    $results = $results->where('status_code', ProjectTask::STATUS_NEW);
-                    break;
-                case ProjectTask::STATUS_STARTING:
-                    $results = $results->where('status_code', ProjectTask::STATUS_STARTING);
-                    break;
-                case ProjectTask::STATUS_PROCESSING:
-                    $results = $results->where('status_code', ProjectTask::STATUS_PROCESSING);
-                    break;
-                case ProjectTask::STATUS_FINISHED:
-                    $results = $results->where('status_code', ProjectTask::STATUS_FINISHED);
-                    break;
-                case ProjectTask::STATUS_FAILED:
-                    $results = $results->where('status_code', ProjectTask::STATUS_FAILED);
-                    break;
-            }
+        } else {
+            $results = \DB::table('project_tasks')
+                ->where('project_id', $request->input('project_id'));
         }
         return $results->get();
     }
