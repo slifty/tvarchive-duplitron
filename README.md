@@ -63,11 +63,11 @@ To run this code you need:
 9. Install supervisor and [enable the job queue](http://laravel.com/docs/5.1/queues#running-the-queue-listener).
 
 	```shell
-		cp duplitron-worker.conf.example /etc/supervisor/conf.d/duplitron-worker.conf
-		vi /etc/supervisor/conf.d/duplitron-worker.conf
+		cp duplitron-worker.conf.example /etc/supervisor/conf.d/fingerprinting-worker.conf
+		vi /etc/supervisor/conf.d/fingerprinting-worker.conf
 		sudo supervisorctl reread
 		sudo supervisorctl update
-		sudo supervisorctl start duplitron-worker:*
+		sudo supervisorctl start fingerprinting-worker:*
 	```
 
 
@@ -117,8 +117,7 @@ sudo apachectl restart
 sudo -upostgres createdb tvarchive_fingerprinting
 sudo -upostgres createuser tvarchive_fingerprinting -P
 sudo -upostgres psql -c "GRANT ALL PRIVILEGES ON DATABASE tvarchive_fingerprinting to tvarchive_fingerprinting"
-sudo chmod 777 -R /var/www/tvarchive-fingerprinting/storage/audfprint
-sudo chmod 777 -R /var/www/tvarchive-fingerprinting/storage/logs
+sudo chmod 777 -R /var/www/tvarchive-fingerprinting/storage
 
 ```
 
@@ -155,6 +154,7 @@ php /var/www/tvarchive-fingerprinting/artisan migrate:refresh
 
 Finally, set up your supervisor processes
 
+<<<<<<< HEAD
 
 
 How to run this in Docker!
@@ -180,3 +180,12 @@ to test if it's working, run this.
 `$ curl --form "name=testymctestface" -XPOST 127.0.0.1/api/projects`
 it should return
 `{"name":"testymctestface","updated_at":"2016-07-12 16:26:06","created_at":"2016-07-12 16:26:06","id":2}`
+=======
+```shell
+	cp duplitron-worker.conf.example /etc/supervisor/conf.d/fingerprinting-worker.conf
+	vi /etc/supervisor/conf.d/fingerprinting-worker.conf
+	sudo supervisorctl reread
+	sudo supervisorctl update
+	sudo supervisorctl start fingerprinting-worker:*
+```
+>>>>>>> 78132d42f01238b95da856d2f6272abfca4bf4ef
