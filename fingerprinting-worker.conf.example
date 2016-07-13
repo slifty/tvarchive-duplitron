@@ -3,7 +3,7 @@ process_name=%(program_name)s_%(process_num)02d
 command=php /var/www/tvarchive-fingerprinting/artisan queue:listen database --timeout=0 --memory=500 --tries=1
 autostart=true
 autorestart=true
-user=$(whoami)
+user=root
 numprocs=20
 stdout_logfile=/var/www/tvarchive-fingerprinting/storage/logs/fingerprinting-worker.log
 stderr_logfile=/var/www/tvarchive-fingerprinting/storage/logs/fingerprinting-worker-errors.log

@@ -92,6 +92,10 @@ cd ~/ffmpeg_sources ; wget http://storage.googleapis.com/downloads.webmproject.o
 cd ~/ffmpeg_sources ; wget http://ffmpeg.org/releases/ffmpeg-snapshot.tar.bz2 ; tar xjvf ffmpeg-snapshot.tar.bz2 ; cd ffmpeg ; PATH="$HOME/bin:$PATH" PKG_CONFIG_PATH="$HOME/ffmpeg_build/lib/pkgconfig" ./configure  --prefix="$HOME/ffmpeg_build" --pkg-config-flags="--static" --extra-cflags="-I$HOME/ffmpeg_build/include" --extra-ldflags="-L$HOME/ffmpeg_build/lib" --bindir="$HOME/bin" --enable-gpl --enable-libass --enable-libfdk-aac --enable-libfreetype --enable-libmp3lame --enable-libopus --enable-libtheora --enable-libvorbis --enable-libvpx --enable-libx264 --enable-libx265 --enable-nonfree ; PATH="$HOME/bin:$PATH" make ; make install ; make distclean ; hash -r
 sudo cp ~/bin/ffmpeg /usr/local/bin
 sudo cp ~/bin/ffprobe /usr/local/bin
+
+
+
+
 sudo apt-get install -y frei0r-plugins git python python-scipy python-pip python-matplotlib software-properties-common wget libfreetype6-dev libpng-dev pkg-config python-dev
 sudo pip install -U distribute
 sudo pip install docopt git+git://github.com/bmcfee/librosa.git joblib
@@ -139,7 +143,7 @@ AUDFPRINT_PATH=/usr/local/src/audfprint/audfprint.py
 DB_DATABASE=tvarchive_fingerprinting
 DB_USERNAME=tvarchive_fingerprinting
 FFMPEG_BINARY_PATH=/usr/local/bin/ffmpeg
-FFMPEG_BINARY_PATH=/usr/local/bin/ffprobe
+FFPROBE_BINARY_PATH=/usr/local/bin/ffprobe
 FPRINT_STORE=/var/www/tvarchive-fingerprinting/storage/audfprint/
 ```
 
@@ -150,3 +154,29 @@ php /var/www/tvarchive-fingerprinting/artisan migrate:refresh
 ```
 
 Finally, set up your supervisor processes
+
+
+
+How to run this in Docker!
+===========================
+docker-compose build
+docker-compose up
+
+in another shell, `docker-compose run web bash`
+then run these in teh docker comtainer:
+````
+createdb -U postgres --host=postgres duplitronfingerprinting 
+createuser -U postgres --host=postgres duplitronfingerprinting -P
+psql  -U postgres --host=postgres -c "GRANT ALL PRIVILEGES ON DATABASE duplitronfingerprinting to duplitronfingerprinting"
+php /var/www/tvarchive-fingerprinting/artisan key:generate
+php /var/www/tvarchive-fingerprinting/artisan migrate:refresh
+sudo service supervisor start
+supervisorctl reread
+supervisorctl update
+supervisorctl start duplitron-worker:*
+````
+
+to test if it's working, run this.
+`$ curl --form "name=testymctestface" -XPOST 127.0.0.1/api/projects`
+it should return
+`{"name":"testymctestface","updated_at":"2016-07-12 16:26:06","created_at":"2016-07-12 16:26:06","id":2}`
