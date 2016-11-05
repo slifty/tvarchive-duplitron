@@ -1045,6 +1045,46 @@ class AudfprintFingerprinter implements FingerprinterContract
                 case FingerprinterContract::MATCH_POTENTIAL_TARGET:
                     break;
             }
+        } else {
+
+            // TODO: THIS IS TEMPORARY AND TERRIBLE
+            // It is being pushed TO DEAL WITH AN ELECTION WEEK ISSUE
+            // We want to restrict full searches JUST to media in the past month to work
+            // through a backlog.
+            switch($match_type)
+            {
+                // Corpus only cares about buckets within +/- 0 day of air date
+                // TODO: "3" days should be an env setting
+                case FingerprinterContract::MATCH_CORPUS:
+                    // Get the base date for this media
+                    $base_time = $this->getBaseTime($media);
+
+                    // Register the valid stems
+                    $stems = [];
+                    $stems[] = date('Y_m_d', $base_time);
+
+                    // Look back (and forward) about a month)
+                    $days_to_scan = 35;
+                    for($x = 1; $x <= $days_to_scan; ++$x)
+                    {
+                        $stems[] = date('Y_m_d', strtotime(' -'.$x.' day', $base_time));
+                        $stems[] = date('Y_m_d', strtotime(' +'.$x.' day', $base_time));
+                    }
+
+                    $databases = array_filter($databases, function($item) use ($stems){
+                        $stem = substr($item, 0, 10);
+                        if(array_search($stem, $stems) === false)
+                            return false;
+                        return true;
+                    });
+                    break;
+
+                // All others have no concept of "inactive" yet
+                case FingerprinterContract::MATCH_DISTRACTOR:
+                case FingerprinterContract::MATCH_TARGET:
+                case FingerprinterContract::MATCH_POTENTIAL_TARGET:
+                    break;
+            }
         }
 
         // Prefix the cache path to each item
