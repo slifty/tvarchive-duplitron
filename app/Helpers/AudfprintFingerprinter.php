@@ -1063,8 +1063,8 @@ class AudfprintFingerprinter implements FingerprinterContract
                     || $this->end_date != null) {
 
                         $overrides = array(
-                            'start_date' => date('Y_m_d', $this->start_date),
-                            'end_date' => date('Y_m_d', $this->end_date)
+                            'start_date' => date('Y_m_d', strtotime(str_replace('_','-',$this->start_date))),
+                            'end_date' => date('Y_m_d', strtotime(str_replace('_','-',$this->end_date)))
                         );
 
                         if(!$overrides['start_date'])
