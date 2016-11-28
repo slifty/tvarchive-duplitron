@@ -53,6 +53,7 @@ class MediaTaskController extends Controller
                     break;
             }
         }
+
         return $results->get();
     }
 
@@ -79,6 +80,14 @@ class MediaTaskController extends Controller
         $task->attempts = 0;
         $task->media_id = $request->input('media_id');
         $task->type = $request->input('type');
+
+        if($request->input('start_date')
+        || $request->input('end_date')) {
+            $task->parameters = array(
+                'start_date' => $request->input('start_date'),
+                'end_date' => $request->input('end_date'),
+            );
+        }
         $task->save();
 
         // Dispatch a job for this task
