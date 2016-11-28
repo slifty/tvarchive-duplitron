@@ -20,6 +20,11 @@ class AudfprintFingerprinter implements FingerprinterContract
     const DATABASE_STATUS_GOOD = 'good';
     const DATABASE_STATUS_MISSING = 'missing';
 
+    // Constraints
+    // TODO: wrap these in getters / setters
+    public $start_date = null;
+    public $end_date = null;
+
     // Contracts
     protected $loader;
 
@@ -1046,37 +1051,42 @@ class AudfprintFingerprinter implements FingerprinterContract
                     break;
             }
         } else {
-
-            // TODO: THIS IS TEMPORARY AND TERRIBLE
-            // It is being pushed TO DEAL WITH AN ELECTION WEEK ISSUE
-            // We want to restrict full searches JUST to media in the past month to work
-            // through a backlog.
             switch($match_type)
             {
-                // Corpus only cares about buckets within +/- 0 day of air date
-                // TODO: "3" days should be an env setting
                 case FingerprinterContract::MATCH_CORPUS:
                     // Get the base date for this media
                     $base_time = $this->getBaseTime($media);
 
-                    // Register the valid stems
-                    $stems = [];
-                    $stems[] = date('Y_m_d', $base_time);
 
-                    // Look back (and forward) about a month)
-                    $days_to_scan = 35;
-                    for($x = 1; $x <= $days_to_scan; ++$x)
-                    {
-                        $stems[] = date('Y_m_d', strtotime(' -'.$x.' day', $base_time));
-                        $stems[] = date('Y_m_d', strtotime(' +'.$x.' day', $base_time));
+                    // Is there a date override?
+                    if($this->start_date != null
+                    || $this->end_date != null) {
+
+                        $overrides = array(
+                            'start_date' => date('Y_m_d', $start_date),
+                            'end_date' => date('Y_m_d', $end_date)
+                        );
+
+                        if(!$overrides['start_date'])
+                            $overrides['start_date'] = date('Y_m_d', 0);
+
+                        if(!$overrides['end_date'])
+                            $overrides['end_date'] = date('Y_m_d');
+
+                        $overrides['start_date'] = (int)str_replace('_', '', $overrides['start_date']);
+                        $overrides['end_date'] = (int)str_replace('_', '', $overrides['end_date']);
+
+                        $databases = array_filter($databases, function($item) use ($overrides) {
+                            $stem = (int)str_replace('_', '', substr($item, 0, 10));
+                            if($stem > $overrides['end_date'])
+                                return false;
+                            if($stem < $overrides['start_date'])
+                                return false;
+                            return true;
+                        });
+
                     }
 
-                    $databases = array_filter($databases, function($item) use ($stems){
-                        $stem = substr($item, 0, 10);
-                        if(array_search($stem, $stems) === false)
-                            return false;
-                        return true;
-                    });
                     break;
 
                 // All others have no concept of "inactive" yet

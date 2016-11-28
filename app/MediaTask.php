@@ -43,7 +43,7 @@ class MediaTask extends Model
      *
      * @var array
      */
-    protected $fillable = ['type', 'attempts'];
+    protected $fillable = ['type', 'attempts', 'parameters'];
 
     /**
      * The attributes excluded from the model's JSON form.
@@ -81,6 +81,17 @@ class MediaTask extends Model
             "data" => json_decode($this->result_data),
             "output" => json_decode($this->result_output)
         ];
+    }
+
+    public function getParametersAttribute() {
+        parse_str($this->attributes['parameters'], $parameters);
+        return $parameters;
+    }
+
+    public function setParametersAttribute($parameters) {
+        // Passed in as an associative array, but stored as a query string
+        $collapsed_parameters = http_build_query($parameters);
+        $this->attributes['parameters'] = $collapsed_parameters;
     }
 
 }
