@@ -15,7 +15,7 @@ class UpdateMediaTasksTable extends Migration
         Schema::table('media_tasks', function (Blueprint $table) {
 
             // Create fields
-            $table->string('parameters');
+            $table->string('parameters')->nullable();
         });
     }
 
