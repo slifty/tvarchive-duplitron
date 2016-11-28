@@ -68,9 +68,9 @@ class PerformMediaTask extends Job implements SelfHandling, ShouldQueue
                 case MediaTask::TYPE_FULL_MATCH: // All files, not just recent ones
 
                     // Set date limits if specified
-                    if($this->task->parameters['start_date'])
+                    if(array_key_exists('start_date', $this->task->parameters))
                         $fingerprinter->start_date = $this->task->parameters['start_date'];
-                    if($this->task->parameters['end_date'])
+                    if(array_key_exists('end_date', $this->task->parameters))
                         $fingerprinter->end_date = $this->task->parameters['end_date'];
 
                     $results = $fingerprinter->runMatch($this->task->media, false);
