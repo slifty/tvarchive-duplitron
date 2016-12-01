@@ -1,0 +1,16 @@
+version: '2'
+services:
+  web:
+    build: .
+    ports:
+     - "80:80"
+    volumes:
+     - .:/code
+    depends_on:
+     - postgres
+     - audfprint
+    command: /usr/sbin/apache2ctl -D FOREGROUND
+  postgres:
+    image: postgres
+  audfprint:
+    image: slifty/audfprint
